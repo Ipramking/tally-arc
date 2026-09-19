@@ -14,6 +14,10 @@ globalThis.TALLY_CONFIG = {
   // CHAIN_ID: 5042002,
   // RPC_URL: "https://rpc.testnet.arc.io",
   // EXPLORER: "https://explorer.testnet.arc.io",
+  // For the testnet dry-run, also set REGISTRY_ADDRESS below to:
+  //   0x459Cab32306c439a408cA6b8672CcF6c6A0536d9  (deployed 2026-09-19)
+  // Verified demo target (owner-proven / green):
+  //   0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb
 
   STUDIO_URL: "https://tally-studio.vercel.app", // register hand-off host (live)
   // TODO: set after `npm run deploy:arc` (or deploy:arcTestnet)

@@ -16,9 +16,14 @@ async function main() {
   await registry.waitForDeployment();
 
   const address = await registry.getAddress();
+  const explorer =
+    net.chainId === 5042002n
+      ? "https://explorer.testnet.arc.io"
+      : "https://explorer.arc.io";
+
   console.log(`\nTallyRegistry deployed at: ${address}`);
   console.log(`Domain separator:          ${await registry.domainSeparator()}`);
-  console.log(`\nExplorer: https://explorer.arc.io/address/${address}`);
+  console.log(`\nExplorer: ${explorer}/address/${address}`);
   console.log(
     `\nSet this everywhere:\n  REGISTRY_ADDRESS=${address}`
   );
