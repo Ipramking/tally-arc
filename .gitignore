@@ -1,0 +1,19 @@
+# dependencies
+**/node_modules
+
+# env / secrets
+**/.env
+**/.env.local
+
+# build output
+contracts/artifacts
+contracts/cache
+contracts/typechain-types
+studio/.next
+studio/out
+studio/next-env.d.ts
+**/*.tsbuildinfo
+
+# os
+.DS_Store
+Thumbs.db

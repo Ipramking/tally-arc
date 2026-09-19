@@ -1,0 +1,20 @@
+{
+  "name": "tally-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TallyRegistry — on-chain contract provenance for Arc Mainnet",
+  "scripts": {
+    "build": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:arc": "hardhat run scripts/deploy.js --network arc",
+    "deploy:arcTestnet": "hardhat run scripts/deploy.js --network arcTestnet"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.10"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "5.0.2",
+    "dotenv": "^16.4.5"
+  }
+}

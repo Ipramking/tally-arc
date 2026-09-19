@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Tally — Arc Pre-Flight Security",
+  "version": "0.1.0",
+  "description": "Shows contract provenance badges on Arc block explorers before you sign. Verified vs Self-attested vs Unverified.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://explorer.arc.io/*",
+        "https://*.explorer.arc.io/*"
+      ],
+      "js": ["config.js", "lib/registry.js", "content/content.js"],
+      "css": ["content/badges.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "host_permissions": [
+    "https://rpc.mainnet.arc.io/*",
+    "https://explorer.arc.io/*"
+  ],
+  "permissions": ["storage"]
+}
