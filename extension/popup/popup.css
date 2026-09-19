@@ -1,24 +1,29 @@
 :root {
-  --canvas: #0b0f17;
-  --surface: #151c28;
-  --usdc: #2775ca;
-  --cyan: #38bdf8;
-  --verified: #10b981;
-  --amber: #f59e0b;
-  --text: #e5edf7;
-  --muted: #7d8aa0;
+  --ink: #0a0a0b;
+  --ink-2: #101012;
+  --ink-3: #16161a;
+  --paper: #f4f2ec;
+  --paper-2: #cbc8bf;
+  --taupe: #8b877b;
+  --line: #26262c;
+  --line-2: #33333b;
+  --proven: #34d399;
+  --self: #62b0ec;
+  --unverified: #e0a341;
+  --mono: "IBM Plex Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
+    monospace;
 }
 
 * {
   box-sizing: border-box;
 }
 body {
-  width: 340px;
+  width: 344px;
   margin: 0;
-  padding: 14px;
-  background: var(--canvas);
-  color: var(--text);
-  font-family: Inter, system-ui, -apple-system, sans-serif;
+  padding: 16px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: "IBM Plex Sans", Inter, system-ui, -apple-system, sans-serif;
   font-size: 13px;
 }
 
@@ -30,149 +35,194 @@ body {
 .tally-logo {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
 }
 .tally-logo .mark {
-  width: 14px;
-  height: 14px;
-  border-radius: 4px;
-  background: linear-gradient(135deg, var(--cyan), var(--usdc));
+  width: 16px;
+  height: 16px;
+  color: var(--paper);
 }
 .tally-logo .name {
-  font-weight: 800;
-  letter-spacing: 1px;
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.16em;
 }
 .net {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 10px;
-  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--taupe);
 }
 .sub {
-  color: var(--muted);
-  margin: 10px 0 12px;
+  color: var(--taupe);
+  margin: 12px 0 14px;
+  line-height: 1.5;
 }
 
 .row {
   display: flex;
-  gap: 6px;
+  gap: 7px;
 }
 #addr {
   flex: 1;
-  background: var(--surface);
-  border: 1px solid #24303f;
-  color: var(--text);
-  border-radius: 6px;
-  padding: 8px 10px;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  background: var(--ink-2);
+  border: 1px solid var(--line-2);
+  color: var(--paper);
+  border-radius: 3px;
+  padding: 9px 11px;
+  font-family: var(--mono);
   font-size: 12px;
+}
+#addr::placeholder {
+  color: #565349;
 }
 #addr:focus {
   outline: none;
-  border-color: var(--cyan);
+  border-color: var(--proven);
 }
 button {
-  background: var(--cyan);
-  color: #04121f;
-  border: 0;
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-weight: 700;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--paper);
+  border-radius: 3px;
+  padding: 9px 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
   cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 button:hover {
-  filter: brightness(1.08);
+  background: var(--proven);
+  border-color: var(--proven);
 }
 
 .presets {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin: 10px 0;
+  gap: 7px;
+  margin: 12px 0;
   flex-wrap: wrap;
 }
 .presets-label {
-  color: var(--muted);
-  font-size: 11px;
+  color: var(--taupe);
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 .preset {
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid #24303f;
-  font-weight: 600;
-  font-size: 11px;
-  padding: 6px 8px;
+  background: transparent;
+  color: var(--paper-2);
+  border: 1px solid var(--line-2);
+  font-weight: 500;
+  font-size: 10.5px;
+  padding: 7px 9px;
+  letter-spacing: 0.08em;
+}
+.preset:hover {
+  background: transparent;
+  border-color: var(--paper-2);
+  color: var(--paper);
 }
 
 .result {
-  margin-top: 8px;
-  padding: 12px;
-  border-radius: 8px;
-  background: var(--surface);
-  border: 1px solid #24303f;
+  margin-top: 10px;
+  padding: 13px;
+  border-radius: 3px;
+  background: var(--ink-2);
+  border: 1px solid var(--line-2);
 }
 .result.hidden {
   display: none;
 }
 .result.loading {
-  color: var(--muted);
+  color: var(--taupe);
+  font-family: var(--mono);
+  font-size: 12px;
 }
 .result .badge {
-  font-weight: 700;
-  margin-bottom: 8px;
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
 }
 .result .badge small {
-  font-weight: 500;
-  color: var(--muted);
-  margin-left: 4px;
+  font-weight: 400;
+  color: var(--taupe);
+  margin-left: 6px;
+  letter-spacing: 0;
+  text-transform: none;
 }
 .result.verified {
-  border-color: rgba(16, 185, 129, 0.4);
+  border-color: rgba(52, 211, 153, 0.42);
 }
 .result.verified .badge {
-  color: var(--verified);
+  color: var(--proven);
 }
 .result.selfattested .badge {
-  color: var(--cyan);
+  color: var(--self);
 }
 .result.unverified {
-  border-color: rgba(245, 158, 11, 0.4);
+  border-color: rgba(224, 163, 65, 0.42);
 }
 .result.unverified .badge {
-  color: var(--amber);
+  color: var(--unverified);
 }
 
 dl {
   margin: 0;
   display: grid;
-  grid-template-columns: 72px 1fr;
-  gap: 4px 8px;
+  grid-template-columns: 74px 1fr;
+  gap: 5px 10px;
 }
 dt {
-  color: var(--muted);
+  color: var(--taupe);
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 dd {
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--paper-2);
 }
 code {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 11px;
 }
 a {
-  color: var(--cyan);
+  color: var(--proven);
   text-decoration: none;
   word-break: break-all;
 }
 .cta {
   display: inline-block;
-  margin-top: 8px;
-  font-weight: 600;
+  margin-top: 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 footer {
-  margin-top: 12px;
+  margin-top: 14px;
   text-align: right;
 }
 footer a {
-  font-size: 11px;
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--taupe);
+}
+footer a:hover {
+  color: var(--paper);
 }

@@ -1,13 +1,18 @@
+/* Tally provenance badges injected on the Arc explorer.
+   Self-contained (they sit on someone else's page): mono, squared, tinted. */
 .tally-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: "IBM Plex Mono", "JetBrains Mono", ui-monospace, SFMono-Regular,
+    Menlo, monospace;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   line-height: 1;
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 5px 9px;
+  border-radius: 3px;
   margin: 0 6px;
   vertical-align: middle;
   border: 1px solid transparent;
@@ -23,28 +28,28 @@
 }
 
 .tally-verified {
-  background: rgba(16, 185, 129, 0.12);
-  color: #10b981;
-  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(52, 211, 153, 0.1);
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.42);
 }
 .tally-verified .tally-dot {
-  background: #10b981;
-  box-shadow: 0 0 6px #10b981;
+  background: #34d399;
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.9);
 }
 
 .tally-selfattested {
-  background: rgba(56, 189, 248, 0.1);
-  color: #38bdf8;
-  border-color: rgba(56, 189, 248, 0.35);
+  background: rgba(98, 176, 236, 0.09);
+  color: #62b0ec;
+  border-color: rgba(98, 176, 236, 0.35);
 }
 .tally-selfattested .tally-dot {
-  background: #38bdf8;
+  background: #62b0ec;
 }
 
 .tally-unverified {
-  background: rgba(245, 158, 11, 0.12);
-  color: #f59e0b;
-  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(224, 163, 65, 0.1);
+  color: #e0a341;
+  border-color: rgba(224, 163, 65, 0.42);
 }
 .tally-unverified .tally-warn {
   font-size: 12px;
