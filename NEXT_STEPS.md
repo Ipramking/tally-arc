@@ -128,15 +128,16 @@ npm run dev            # http://localhost:3000
 - Open an `explorer.arc.io/address/0x…` page → badge should inject.
 - Click the toolbar icon → try both 1-click presets.
 
-## Phase 6 — Host the studio  *(so the extension hand-off works publicly)*
+## Phase 6 — Host the studio  ✅ *(done)*
 
-Deploy `studio/` to Vercel:
-1. Push the repo (Phase 7) and import it in Vercel, root directory `studio`.
-2. Set env var `NEXT_PUBLIC_REGISTRY_ADDRESS` (and optionally
-   `NEXT_PUBLIC_ARC_RPC_URL`).
-3. Point `extension/config.js` `STUDIO_URL` at the deployed URL (or your
-   `tally.build` domain).
-4. Confirm the badge API responds: `https://<studio-url>/api/badge/<REGISTRY_ADDRESS>`
+Studio is live at **https://tally-studio.vercel.app** (Vercel project
+`ifrenzys-projects/tally-studio`, root directory `studio`). The repo is public
+and `extension/config.js` `STUDIO_URL` already points at that URL.
+
+**Remaining:** once the registry is deployed (Phase 2), set the Vercel env var
+`NEXT_PUBLIC_REGISTRY_ADDRESS` (Project → Settings → Environment Variables) and
+redeploy, then confirm the badge API returns a real state:
+`https://tally-studio.vercel.app/api/badge/<REGISTRY_ADDRESS>`
 
 ## Phase 7 — Public repo
 

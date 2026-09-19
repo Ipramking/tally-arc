@@ -13,6 +13,8 @@ their code.
 > (DoraHacks). It is intentionally small and end-to-end: a deployed contract, a
 > browser badge, and a one-signature register flow.
 
+**Live studio:** https://tally-studio.vercel.app  ·  **Register:** https://tally-studio.vercel.app/register
+
 ---
 
 ## What's inside
@@ -63,7 +65,12 @@ npm run dev                        # http://localhost:3000
 ```
 
 - `/register?address=0x…` — connect wallet, sign EIP-712, submit on Arc.
-- `/api/badge/0x…` — live SVG badge: `![Tally](https://tally.build/api/badge/0xYourContract)`
+- `/api/badge/0x…` — live SVG badge:
+  `![Tally](https://tally-studio.vercel.app/api/badge/0xYourContract)`
+
+> Tip: rehearse the whole flow for free on **Arc Testnet** first
+> (`NEXT_STEPS.md` → Phase 0): `npm run deploy:arcTestnet`, fund via
+> `faucet.circle.com`, set `NEXT_PUBLIC_ARC_CHAIN_ID=5042002`.
 
 ### 3. Extension
 
@@ -99,11 +106,14 @@ to avoid phishing RPCs.
 
 ## Submission checklist
 
-- [x] `TallyRegistry.sol` written, tested (4 passing), Shanghai/Paris-safe bytecode
-- [ ] Deployed to Arc Mainnet, address documented here
-- [x] Public repo (this)
-- [x] Extension badges + evaluator presets
-- [x] Studio `/register` EIP-712 flow + badge API
+- [x] `TallyRegistry.sol` — enforced provenance, 4 passing Hardhat tests (incl. anti-squat)
+- [x] Public repo — [github.com/Ipramking/tally-arc](https://github.com/Ipramking/tally-arc)
+- [x] Studio live on Vercel — [tally-studio.vercel.app](https://tally-studio.vercel.app) (`/register` EIP-712 flow + badge API)
+- [x] MV3 extension — badge injection + 1-click evaluator presets, testnet-aware
+- [x] Testnet dry-run wired end-to-end (chain `5042002`, one env switch)
+- [ ] Deployed to Arc Mainnet, `REGISTRY_ADDRESS` documented here
+- [ ] `NEXT_PUBLIC_REGISTRY_ADDRESS` set on Vercel + `extension/config.js` wired
+- [ ] Demo target registered → real evaluator presets (replace placeholder addresses)
 - [ ] 1-minute demo video
 - [ ] DoraHacks submission under Arc Microgrants
 

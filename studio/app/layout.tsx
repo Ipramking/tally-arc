@@ -19,10 +19,16 @@ const plexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
+const title = "Tally · Contract Provenance for Arc Mainnet";
+const description =
+  "Know the code before you sign. Tally proves, on-chain, that a deployed Arc contract is linked to its public source. Owner-proven, not just claimed.";
+
 export const metadata: Metadata = {
-  title: "Tally · Contract Provenance for Arc Mainnet",
-  description:
-    "Know the code before you sign. Tally proves, on-chain, that a deployed Arc contract is linked to its public source. Owner-proven, not just claimed.",
+  metadataBase: new URL("https://tally-studio.vercel.app"),
+  title,
+  description,
+  openGraph: { title, description, siteName: "Tally", type: "website" },
+  twitter: { card: "summary_large_image", title, description },
 };
 
 export default function RootLayout({

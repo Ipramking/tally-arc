@@ -9,6 +9,7 @@ import {
   useDisconnect,
   useReadContract,
   useSignTypedData,
+  useSwitchChain,
   useWriteContract,
 } from "wagmi";
 import { isAddress } from "viem";
@@ -50,11 +51,14 @@ function RegisterInner() {
 
   useEffect(() => setTarget(prefilled), [prefilled]);
 
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chainId } = useAccount();
   const { connect, connectors, isPending: connecting } = useConnect();
   const { disconnect } = useDisconnect();
+  const { switchChainAsync, isPending: switching } = useSwitchChain();
   const { signTypedDataAsync, isPending: signing } = useSignTypedData();
   const { writeContractAsync, isPending: writing } = useWriteContract();
+
+  const wrongNetwork = isConnected && chainId !== arc.id;
 
   const validTarget = useMemo(() => isAddress(target), [target]);
 
@@ -75,6 +79,14 @@ function RegisterInner() {
     try {
       if (!validTarget) throw new Error("Enter a valid target address.");
       if (!repo) throw new Error("Enter a GitHub repo URL.");
+
+      // Make sure the wallet is on Arc before signing/submitting. Without this
+      // a wrong-network wallet fails the write with an opaque error. The
+      // connector will prompt to switch (and add Arc if it's unknown).
+      if (chainId !== arc.id) {
+        await switchChainAsync({ chainId: arc.id });
+      }
+
       const currentNonce = (nonce as bigint | undefined) ?? 0n;
 
       // 1) Sign the EIP-712 payload (relayer-friendly; signer pays no gas).
@@ -104,7 +116,7 @@ function RegisterInner() {
     }
   }
 
-  const busy = signing || writing;
+  const busy = switching || signing || writing;
 
   return (
     <>
@@ -194,6 +206,19 @@ function RegisterInner() {
             onChange={(e) => setBuildHash(e.target.value)}
             placeholder="0x… or git SHA"
           />
+
+          {wrongNetwork && (
+            <div className="status err" style={{ display: "flex", gap: 12, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+              <span>Wallet is on the wrong network. Tally runs on {arc.name} ({arc.id}).</span>
+              <button
+                className="btn-ghost"
+                onClick={() => switchChainAsync({ chainId: arc.id })}
+                disabled={switching}
+              >
+                <span className="u">{switching ? "Switching…" : `Switch to ${arc.name}`}</span>
+              </button>
+            </div>
+          )}
 
           <div style={{ marginTop: 26 }}>
             <button
