@@ -14,6 +14,53 @@ verified; the remaining work is deploy → wire → demo → submit.
 
 ---
 
+## Phase 0 — Testnet dry-run  *(free — do this first)*
+
+Rehearse the entire flow on **Arc Testnet** before spending a cent on mainnet.
+Testnet USDC gas is free from the Circle faucet, and everything is wired to
+switch with one env var / one commented block.
+
+| Field | Value |
+|---|---|
+| Network name | `Arc Testnet` |
+| Chain ID | `5042002` |
+| RPC URL | `https://rpc.testnet.arc.io` |
+| Currency symbol | `USDC` |
+| Block explorer | `https://explorer.testnet.arc.io` |
+| Faucet | `https://faucet.circle.com` |
+
+1. Add Arc Testnet to your wallet (values above) and grab free USDC from
+   `faucet.circle.com`.
+2. **Deploy the registry to testnet:**
+   ```bash
+   cd contracts
+   cp .env.example .env      # paste DEPLOYER_PRIVATE_KEY
+   npm run deploy:arcTestnet     # prints the testnet REGISTRY_ADDRESS
+   ```
+3. **Deploy a demo target you own** (so you can show the green owner-proven
+   badge):
+   ```bash
+   npm run deploy:demo:arcTestnet   # prints an OwnableTarget address you own
+   ```
+4. **Point the studio at testnet** — in `studio/.env.local`:
+   ```
+   NEXT_PUBLIC_ARC_CHAIN_ID=5042002
+   NEXT_PUBLIC_REGISTRY_ADDRESS=<testnet registry from step 2>
+   ```
+   Run `npm run dev`, open `/register`, and register the demo target while
+   connected as its owner → it resolves to **OWNER_PROVEN** (green).
+5. **Point the extension at testnet** — in `extension/config.js`, comment the
+   MAINNET block and uncomment TESTNET, and set `REGISTRY_ADDRESS` to the
+   testnet registry. The content script already runs on
+   `explorer.testnet.arc.io`. Load unpacked and open the demo target's page.
+6. Confirm badge API: `http://localhost:3000/api/badge/<demo-target>` → verified.
+
+When the whole loop works on testnet, repeat Phases 1–2 on mainnet with
+confidence. **Remember to switch the studio and extension back to mainnet
+(`NEXT_PUBLIC_ARC_CHAIN_ID=5042`, MAINNET block) before the real submission.**
+
+---
+
 ## Phase 1 — Wallet + USDC on Arc  *(you; funds + keys)*
 
 1. In an EVM wallet (e.g. MetaMask), add the Arc network:

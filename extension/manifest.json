@@ -20,7 +20,8 @@
     {
       "matches": [
         "https://explorer.arc.io/*",
-        "https://*.explorer.arc.io/*"
+        "https://*.explorer.arc.io/*",
+        "https://explorer.testnet.arc.io/*"
       ],
       "js": ["config.js", "lib/registry.js", "content/content.js"],
       "css": ["content/badges.css"],
@@ -29,7 +30,9 @@
   ],
   "host_permissions": [
     "https://rpc.mainnet.arc.io/*",
-    "https://explorer.arc.io/*"
+    "https://explorer.arc.io/*",
+    "https://rpc.testnet.arc.io/*",
+    "https://explorer.testnet.arc.io/*"
   ],
   "permissions": ["storage"]
 }

@@ -1,11 +1,15 @@
+import { arc } from "@/lib/arc";
+
 export const REGISTRY_ADDRESS = (process.env.NEXT_PUBLIC_REGISTRY_ADDRESS ||
   "0x0000000000000000000000000000000000000000") as `0x${string}`;
 
 // EIP-712 domain for TallyRegistry (matches constructor EIP712("Tally","1")).
+// chainId tracks the active Arc network (mainnet 5042 / testnet 5042002), so
+// signatures produced here are only valid on the chain the studio targets.
 export const registryDomain = {
   name: "Tally",
   version: "1",
-  chainId: 5042,
+  chainId: arc.id,
   verifyingContract: REGISTRY_ADDRESS,
 } as const;
 

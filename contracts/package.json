@@ -7,7 +7,9 @@
     "build": "hardhat compile",
     "test": "hardhat test",
     "deploy:arc": "hardhat run scripts/deploy.js --network arc",
-    "deploy:arcTestnet": "hardhat run scripts/deploy.js --network arcTestnet"
+    "deploy:arcTestnet": "hardhat run scripts/deploy.js --network arcTestnet",
+    "deploy:demo:arc": "hardhat run scripts/deploy-demo.js --network arc",
+    "deploy:demo:arcTestnet": "hardhat run scripts/deploy-demo.js --network arcTestnet"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
