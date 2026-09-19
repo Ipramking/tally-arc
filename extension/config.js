@@ -15,7 +15,7 @@ globalThis.TALLY_CONFIG = {
   // RPC_URL: "https://rpc.testnet.arc.io",
   // EXPLORER: "https://explorer.testnet.arc.io",
 
-  STUDIO_URL: "https://tally.build", // register hand-off host
+  STUDIO_URL: "https://tally-studio.vercel.app", // register hand-off host (live)
   // TODO: set after `npm run deploy:arc` (or deploy:arcTestnet)
   REGISTRY_ADDRESS: "0x0000000000000000000000000000000000000000",
 
