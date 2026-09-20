@@ -17,3 +17,6 @@ studio/next-env.d.ts
 # os
 .DS_Store
 Thumbs.db
+
+# brand tooling font (open-licence, downloaded on demand)
+brand/PlexMono-SemiBold.ttf

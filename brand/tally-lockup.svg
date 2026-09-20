@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="160" viewBox="0 0 520 160" fill="none">
+  <!-- mark -->
+  <g stroke="#f4f2ec" stroke-width="9" stroke-linecap="round" transform="translate(24,44)">
+    <line x1="10" y1="6" x2="10" y2="66" />
+    <line x1="30" y1="6" x2="30" y2="66" />
+    <line x1="50" y1="6" x2="50" y2="66" />
+    <line x1="70" y1="6" x2="70" y2="66" />
+    <line x1="2" y1="63" x2="78" y2="9" />
+  </g>
+  <!-- wordmark -->
+  <text x="140" y="98" font-family="'IBM Plex Mono','JetBrains Mono',ui-monospace,monospace"
+        font-size="62" font-weight="600" letter-spacing="10" fill="#f4f2ec">TALLY</text>
+</svg>
