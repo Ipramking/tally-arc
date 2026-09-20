@@ -4,6 +4,7 @@
   const ADDRESS_RE = /0x[a-fA-F0-9]{40}/;
   const seen = new WeakSet();
   const cache = new Map(); // address -> registration result
+  const badged = new Set(); // addresses already given a badge (one per page)
 
   function studioRegisterUrl(address) {
     return `${cfg.STUDIO_URL}/register?address=${address}`;
@@ -55,6 +56,9 @@
   async function decorate(node, address) {
     if (seen.has(node)) return;
     seen.add(node);
+    const key = address.toLowerCase();
+    if (badged.has(key)) return; // at most one badge per address, page-wide
+    badged.add(key);
     const reg = await resolve(address);
     const badge = makeBadge(reg, address);
     node.insertAdjacentElement("afterend", badge);
@@ -65,8 +69,9 @@
     const m = location.pathname.match(ADDRESS_RE);
     if (!m) return;
     const address = m[0];
+    if (badged.has(address.toLowerCase())) return; // already placed inline
     const header =
-      document.querySelector("h1, h2, [data-testid='address-hash'], main") ||
+      document.querySelector("h1, h2, [data-testid='address-hash']") ||
       document.body;
     if (header && !header.querySelector(".tally-badge")) {
       const anchor = document.createElement("span");
@@ -88,8 +93,11 @@
 
   function run() {
     try {
-      decoratePrimary();
+      // Inline first so the badge lands on the address in the header (nicely
+      // placed); decoratePrimary is only a fallback when the address isn't a
+      // link. Dedup keeps it to one badge per unique address on the page.
       decorateInline();
+      decoratePrimary();
     } catch (e) {
       console.debug("[Tally] run error", e);
     }
