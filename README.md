@@ -1,8 +1,12 @@
+<p align="center">
+  <img src="brand/png/tally-lockup-ink.png" alt="Tally" width="360" />
+</p>
+
 # Tally — Pre-Flight Contract Provenance for Arc Mainnet
 
 Tally links a deployed contract on **Arc Mainnet** (Chain ID `5042`, USDC as
-native gas) to its **public source repository**, and — crucially — **proves
-control on-chain** rather than merely asserting it.
+native gas) to its **public source repository**, and **proves control
+on-chain** rather than merely asserting it.
 
 On Arc, gas is settled in USDC, so a single malicious `approve` or contract call
 drains real dollars. Tally gives users a fast, honest trust signal *before* they
