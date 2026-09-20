@@ -104,18 +104,29 @@ to avoid phishing RPCs.
   for Arc.
 - The extension and badge API read Arc state directly over `rpc.mainnet.arc.io`.
 
+## Live on Arc Mainnet (chain 5042)
+
+| | |
+|---|---|
+| `TallyRegistry` | [`0x459Cab32306c439a408cA6b8672CcF6c6A0536d9`](https://explorer.arc.io/address/0x459Cab32306c439a408cA6b8672CcF6c6A0536d9) |
+| Verified demo (owner-proven) | [`0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb`](https://explorer.arc.io/address/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb) |
+| Register tx (verifiable) | [`0xc8a7…63c3`](https://explorer.arc.io/tx/0xc8a79672f610ef92d82edd154364bba45300acfb46ab981e0015ac19389d63c3) |
+| Studio | [tally-studio.vercel.app](https://tally-studio.vercel.app) |
+| Live badge (demo) | [`/api/badge/0x0f399…0cCb`](https://tally-studio.vercel.app/api/badge/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb) · [provenance page](https://tally-studio.vercel.app/c/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb) |
+
 ## Submission checklist
 
 - [x] `TallyRegistry.sol` — enforced provenance, 4 passing Hardhat tests (incl. anti-squat)
 - [x] Public repo — [github.com/Ipramking/tally-arc](https://github.com/Ipramking/tally-arc)
 - [x] Studio live on Vercel — [tally-studio.vercel.app](https://tally-studio.vercel.app) (`/register` EIP-712 flow + badge API)
-- [x] MV3 extension — badge injection + 1-click evaluator presets, testnet-aware
+- [x] MV3 extension — badge injection + 1-click evaluator presets
 - [x] Testnet dry-run wired end-to-end (chain `5042002`, one env switch)
-- [ ] Deployed to Arc Mainnet, `REGISTRY_ADDRESS` documented here
-- [ ] `NEXT_PUBLIC_REGISTRY_ADDRESS` set on Vercel + `extension/config.js` wired
-- [ ] Demo target registered → real evaluator presets (replace placeholder addresses)
-- [ ] 1-minute demo video
-- [ ] DoraHacks submission under Arc Microgrants
+- [x] **Deployed to Arc Mainnet** — registry `0x459Cab32306c439a408cA6b8672CcF6c6A0536d9`
+- [x] `NEXT_PUBLIC_REGISTRY_ADDRESS` set on Vercel + `extension/config.js` wired (mainnet)
+- [x] Demo target registered → real evaluator presets (owner-proven, live)
+- [x] Anti-squat verified live on mainnet with an independent (non-owner) wallet
+- [x] **DoraHacks submission** under Arc Microgrants
+- [ ] 1-minute demo video (optional — not required for eligibility)
 
 ## License
 
