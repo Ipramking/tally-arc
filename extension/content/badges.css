@@ -1,23 +1,27 @@
 /* Tally provenance badges injected on the Arc explorer.
-   Self-contained (they sit on someone else's page): mono, squared, tinted. */
+   Uniform brand chrome (ink surface + cream mono text + hairline); the status
+   is carried by the coloured dot only: green = verified, red = unverified,
+   blue = self-attested. Self-contained (they sit on someone else's page). */
 .tally-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   font-family: "IBM Plex Mono", "JetBrains Mono", ui-monospace, SFMono-Regular,
     Menlo, monospace;
   font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   line-height: 1;
-  padding: 5px 9px;
+  padding: 5px 10px;
   border-radius: 3px;
   margin: 0 6px;
   vertical-align: middle;
-  border: 1px solid transparent;
   white-space: nowrap;
   user-select: none;
+  background: #101012;
+  color: #f4f2ec;
+  border: 1px solid #33333b;
 }
 
 .tally-badge .tally-dot {
@@ -25,32 +29,19 @@
   height: 7px;
   border-radius: 50%;
   display: inline-block;
+  flex: 0 0 auto;
 }
 
-.tally-verified {
-  background: rgba(52, 211, 153, 0.1);
-  color: #34d399;
-  border-color: rgba(52, 211, 153, 0.42);
-}
+/* Status = dot colour only. */
 .tally-verified .tally-dot {
   background: #34d399;
   box-shadow: 0 0 6px rgba(52, 211, 153, 0.9);
 }
-
-.tally-selfattested {
-  background: rgba(98, 176, 236, 0.09);
-  color: #62b0ec;
-  border-color: rgba(98, 176, 236, 0.35);
-}
 .tally-selfattested .tally-dot {
   background: #62b0ec;
+  box-shadow: 0 0 5px rgba(98, 176, 236, 0.7);
 }
-
-.tally-unverified {
-  background: rgba(224, 163, 65, 0.1);
-  color: #e0a341;
-  border-color: rgba(224, 163, 65, 0.42);
-}
-.tally-unverified .tally-warn {
-  font-size: 12px;
+.tally-unverified .tally-dot {
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.85);
 }

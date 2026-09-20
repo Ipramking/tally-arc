@@ -31,7 +31,7 @@
       }
     } else {
       el.classList.add("tally-unverified");
-      el.innerHTML = `<span class="tally-warn">&#9888;</span> Unverified &middot; Register`;
+      el.innerHTML = `<span class="tally-dot"></span> Unverified &middot; Register`;
       el.title = "No Tally provenance record. Click to register.";
       el.style.cursor = "pointer";
       el.addEventListener("click", () =>

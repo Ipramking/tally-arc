@@ -9,7 +9,7 @@
   --line-2: #33333b;
   --proven: #34d399;
   --self: #62b0ec;
-  --unverified: #e0a341;
+  --unverified: #ef4444;
   --mono: "IBM Plex Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
     monospace;
 }
@@ -170,7 +170,7 @@ button:hover {
   color: var(--self);
 }
 .result.unverified {
-  border-color: rgba(224, 163, 65, 0.42);
+  border-color: rgba(239, 68, 68, 0.42);
 }
 .result.unverified .badge {
   color: var(--unverified);

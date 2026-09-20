@@ -100,8 +100,8 @@ export default function Home() {
                 Register a contract
                 <span aria-hidden="true">→</span>
               </Link>
-              <Link href="/register?address=0x000000000000000000000000000000000000dEaD" className="btn-ghost">
-                <span className="u">See a live badge</span>
+              <Link href="/c/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb" className="btn-ghost">
+                <span className="u">See a provenance record</span>
                 <span className="arw">↗</span>
               </Link>
             </div>
@@ -215,11 +215,11 @@ export default function Home() {
               Evaluator presets
             </div>
             <div className="presets">
-              <Link href="/register?address=0x0000000000000000000000000000000000000000" className="preset">
+              <Link href="/c/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb" className="preset">
                 <span className="swatch" style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--proven)" }} />
                 Preset A · Verified
               </Link>
-              <Link href="/register?address=0x000000000000000000000000000000000000dEaD" className="preset">
+              <Link href="/c/0x000000000000000000000000000000000000dEaD" className="preset">
                 <span className="swatch" style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--unverified)" }} />
                 Preset B · Unverified
               </Link>

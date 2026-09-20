@@ -249,6 +249,12 @@ function RegisterInner() {
               >
                 View transaction {short(txHash)} ↗
               </a>
+              {validTarget && (
+                <>
+                  {" · "}
+                  <Link href={`/c/${target}`}>View provenance page →</Link>
+                </>
+              )}
             </div>
           )}
           {error && <div className="status err">{error}</div>}
