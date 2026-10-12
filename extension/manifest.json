@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Tally — Arc Pre-Flight Security",
-  "version": "0.1.0",
-  "description": "Shows contract provenance badges on Arc block explorers before you sign. Verified vs Self-attested vs Unverified.",
+  "name": "Tally: Contract Provenance",
+  "version": "0.2.0",
+  "description": "Shows contract provenance badges on supported block explorers before you sign: Verified, Control proven, Stale, Self-attested or Unverified.",
+  "minimum_chrome_version": "110",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -16,23 +17,28 @@
       "128": "icons/icon128.png"
     }
   },
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
-      "matches": [
-        "https://explorer.arc.io/*",
-        "https://*.explorer.arc.io/*",
-        "https://explorer.testnet.arc.io/*"
+      "matches": ["https://explorer.arc.io/*", "https://explorer.testnet.arc.io/*"],
+      "js": [
+        "chains.generated.js",
+        "lib/safe-url.js",
+        "lib/status.js",
+        "content/content.js"
       ],
-      "js": ["config.js", "lib/registry.js", "content/content.js"],
       "css": ["content/badges.css"],
       "run_at": "document_idle"
     }
   ],
   "host_permissions": [
     "https://rpc.mainnet.arc.io/*",
-    "https://explorer.arc.io/*",
     "https://rpc.testnet.arc.io/*",
-    "https://explorer.testnet.arc.io/*"
+    "https://raw.githubusercontent.com/*"
   ],
-  "permissions": ["storage"]
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+  }
 }

@@ -1,7 +1,9 @@
-/* Tally provenance badges injected on the Arc explorer.
-   Uniform brand chrome (ink surface + cream mono text + hairline); the status
-   is carried by the coloured dot only: green = verified, red = unverified,
-   blue = self-attested. Self-contained (they sit on someone else's page). */
+/* Tally provenance badges injected on supported block explorers.
+   Uniform brand chrome (ink surface + cream mono text + hairline); the level is
+   carried by the dot colour and the label:
+     green = verified, blue = control proven, amber = stale,
+     grey = self-attested, red = unverified, hollow = unavailable.
+   Self-contained: they sit on someone else's page. */
 .tally-badge {
   display: inline-flex;
   align-items: center;
@@ -18,10 +20,24 @@
   margin: 0 6px;
   vertical-align: middle;
   white-space: nowrap;
-  user-select: none;
   background: #101012;
-  color: #f4f2ec;
+  color: #f4f2ec !important;
   border: 1px solid #33333b;
+  text-decoration: none !important;
+  cursor: pointer;
+}
+
+.tally-badge:not([href]) {
+  cursor: default;
+}
+
+.tally-badge:hover {
+  border-color: #6b6b78;
+}
+
+.tally-badge:focus-visible {
+  outline: 2px solid #f4f2ec;
+  outline-offset: 2px;
 }
 
 .tally-badge .tally-dot {
@@ -30,18 +46,30 @@
   border-radius: 50%;
   display: inline-block;
   flex: 0 0 auto;
+  box-sizing: border-box;
 }
 
-/* Status = dot colour only. */
+/* Level = dot colour. */
 .tally-verified .tally-dot {
   background: #34d399;
   box-shadow: 0 0 6px rgba(52, 211, 153, 0.9);
 }
-.tally-selfattested .tally-dot {
+.tally-control-proven .tally-dot {
   background: #62b0ec;
   box-shadow: 0 0 5px rgba(98, 176, 236, 0.7);
+}
+.tally-stale .tally-dot {
+  background: #f5b942;
+  box-shadow: 0 0 5px rgba(245, 185, 66, 0.7);
+}
+.tally-self-attested .tally-dot {
+  background: #8b877b;
 }
 .tally-unverified .tally-dot {
   background: #ef4444;
   box-shadow: 0 0 6px rgba(239, 68, 68, 0.85);
+}
+.tally-unknown .tally-dot {
+  background: transparent;
+  border: 1.5px solid #8b877b;
 }

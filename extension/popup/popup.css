@@ -8,7 +8,9 @@
   --line: #26262c;
   --line-2: #33333b;
   --proven: #34d399;
-  --self: #62b0ec;
+  --control: #62b0ec;
+  --stale: #f5b942;
+  --self: #8b877b;
   --unverified: #ef4444;
   --mono: "IBM Plex Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
     monospace;
@@ -48,12 +50,31 @@ body {
   font-size: 13px;
   letter-spacing: 0.16em;
 }
-.net {
+.net select {
+  background: var(--ink-2);
+  color: var(--taupe);
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  padding: 4px 6px;
   font-family: var(--mono);
   font-size: 10px;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--taupe);
+}
+.net select:focus-visible {
+  outline: 2px solid var(--paper);
+  outline-offset: 1px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.hidden {
+  display: none;
 }
 .sub {
   color: var(--taupe);
@@ -100,6 +121,11 @@ button:hover {
   background: var(--proven);
   border-color: var(--proven);
 }
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--paper);
+  outline-offset: 2px;
+}
 
 .presets {
   display: flex;
@@ -137,9 +163,6 @@ button:hover {
   background: var(--ink-2);
   border: 1px solid var(--line-2);
 }
-.result.hidden {
-  display: none;
-}
 .result.loading {
   color: var(--taupe);
   font-family: var(--mono);
@@ -166,7 +189,19 @@ button:hover {
 .result.verified .badge {
   color: var(--proven);
 }
-.result.selfattested .badge {
+.result.control-proven {
+  border-color: rgba(98, 176, 236, 0.42);
+}
+.result.control-proven .badge {
+  color: var(--control);
+}
+.result.stale {
+  border-color: rgba(245, 185, 66, 0.42);
+}
+.result.stale .badge {
+  color: var(--stale);
+}
+.result.self-attested .badge {
   color: var(--self);
 }
 .result.unverified {
@@ -174,6 +209,14 @@ button:hover {
 }
 .result.unverified .badge {
   color: var(--unverified);
+}
+.result.unknown {
+  color: var(--taupe);
+}
+.result p {
+  margin: 0 0 10px;
+  line-height: 1.5;
+  color: var(--paper-2);
 }
 
 dl {
