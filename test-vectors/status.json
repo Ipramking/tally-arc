@@ -1,0 +1,363 @@
+{
+  "_comment": "Shared by studio/test and extension/test. Registration objects carry only the fields decideLevel reads.",
+  "decideLevel": [
+    {
+      "name": "no record",
+      "registration": null,
+      "repo": null,
+      "expected": "unverified"
+    },
+    {
+      "name": "provenance NONE",
+      "registration": {
+        "provenance": "NONE",
+        "registryVersion": 2,
+        "controlCurrent": false,
+        "codeCurrent": false
+      },
+      "repo": null,
+      "expected": "unverified"
+    },
+    {
+      "name": "self-attested v2",
+      "registration": {
+        "provenance": "SELF_ATTESTED",
+        "registryVersion": 2,
+        "controlCurrent": false,
+        "codeCurrent": true
+      },
+      "repo": null,
+      "expected": "self-attested"
+    },
+    {
+      "name": "self-attested v1",
+      "registration": {
+        "provenance": "SELF_ATTESTED",
+        "registryVersion": 1,
+        "controlCurrent": null,
+        "codeCurrent": null
+      },
+      "repo": null,
+      "expected": "self-attested"
+    },
+    {
+      "name": "self-attested never verified even if the repo lists it",
+      "registration": {
+        "provenance": "SELF_ATTESTED",
+        "registryVersion": 2,
+        "controlCurrent": false,
+        "codeCurrent": true
+      },
+      "repo": {
+        "status": "confirmed"
+      },
+      "expected": "self-attested"
+    },
+    {
+      "name": "v2 live, repo confirms",
+      "registration": {
+        "provenance": "CONTROL_PROVEN",
+        "registryVersion": 2,
+        "controlCurrent": true,
+        "codeCurrent": true
+      },
+      "repo": {
+        "status": "confirmed"
+      },
+      "expected": "verified"
+    },
+    {
+      "name": "v2 live, repo does not list it",
+      "registration": {
+        "provenance": "CONTROL_PROVEN",
+        "registryVersion": 2,
+        "controlCurrent": true,
+        "codeCurrent": true
+      },
+      "repo": {
+        "status": "not-listed"
+      },
+      "expected": "control-proven"
+    },
+    {
+      "name": "v2 live, repo has no tally.json",
+      "registration": {
+        "provenance": "CONTROL_PROVEN",
+        "registryVersion": 2,
+        "controlCurrent": true,
+        "codeCurrent": true
+      },
+      "repo": {
+        "status": "no-file"
+      },
+      "expected": "control-proven"
+    },
+    {
+      "name": "v2 live, tally.json invalid",
+      "registration": {
+        "provenance": "CONTROL_PROVEN",
+        "registryVersion": 2,
+        "controlCurrent": true,
+        "codeCurrent": true
+      },
+      "repo": {
+        "status": "invalid-file"
+      },
+      "expected": "control-proven"
+    },
+    {
+      "name": "v2 live, repo link invalid",
+      "registration": {
+        "provenance": "CONTROL_PROVEN",
+        "registryVersion": 2,
+        "controlCurrent": true,
+        "codeCurrent": true
+      },
+      "repo": {
+        "status": "invalid-repo"
+      },
+      "expected": "control-proven"
+    },
+    {
+      "name": "v2 live, repo unreachable",
+      "registration": {
+        "provenance": "CONTROL_PROVEN",
+        "registryVersion": 2,
+        "controlCurrent": true,
+        "codeCurrent": true
+      },
+      "repo": {
+        "status": "unavailable"
+      },
+      "expected": "control-proven"
+    },
+    {
+      "name": "v2 live, repo not checked",
+      "registration": {
+        "provenance": "CONTROL_PROVEN",
+        "registryVersion": 2,
+        "controlCurrent": true,
+        "codeCurrent": true
+      },
+      "repo": null,
+      "expected": "control-proven"
+    },
+    {
+      "name": "v2 signer lost control",
+      "registration": {
+        "provenance": "CONTROL_PROVEN",
+        "registryVersion": 2,
+        "controlCurrent": false,
+        "codeCurrent": true
+      },
+      "repo": {
+        "status": "confirmed"
+      },
+      "expected": "stale"
+    },
+    {
+      "name": "v2 code changed",
+      "registration": {
+        "provenance": "CONTROL_PROVEN",
+        "registryVersion": 2,
+        "controlCurrent": true,
+        "codeCurrent": false
+      },
+      "repo": {
+        "status": "confirmed"
+      },
+      "expected": "stale"
+    },
+    {
+      "name": "v2 both lost",
+      "registration": {
+        "provenance": "CONTROL_PROVEN",
+        "registryVersion": 2,
+        "controlCurrent": false,
+        "codeCurrent": false
+      },
+      "repo": {
+        "status": "confirmed"
+      },
+      "expected": "stale"
+    },
+    {
+      "name": "v1 live owner, repo confirms: v1 cannot track code, never verified",
+      "registration": {
+        "provenance": "CONTROL_PROVEN",
+        "registryVersion": 1,
+        "controlCurrent": true,
+        "codeCurrent": null
+      },
+      "repo": {
+        "status": "confirmed"
+      },
+      "expected": "control-proven"
+    },
+    {
+      "name": "v1 live owner, repo missing",
+      "registration": {
+        "provenance": "CONTROL_PROVEN",
+        "registryVersion": 1,
+        "controlCurrent": true,
+        "codeCurrent": null
+      },
+      "repo": {
+        "status": "no-file"
+      },
+      "expected": "control-proven"
+    },
+    {
+      "name": "v1 owner changed",
+      "registration": {
+        "provenance": "CONTROL_PROVEN",
+        "registryVersion": 1,
+        "controlCurrent": false,
+        "codeCurrent": null
+      },
+      "repo": {
+        "status": "confirmed"
+      },
+      "expected": "stale"
+    }
+  ],
+  "pickBest": [
+    {
+      "name": "empty list",
+      "registrations": [],
+      "expectedIndex": null
+    },
+    {
+      "name": "single self-attested",
+      "registrations": [
+        {
+          "provenance": "SELF_ATTESTED",
+          "registryVersion": 2,
+          "controlCurrent": false,
+          "codeCurrent": true
+        }
+      ],
+      "expectedIndex": 0
+    },
+    {
+      "name": "newer self-attested cannot hide an older live proof",
+      "registrations": [
+        {
+          "provenance": "SELF_ATTESTED",
+          "registryVersion": 2,
+          "controlCurrent": false,
+          "codeCurrent": true
+        },
+        {
+          "provenance": "CONTROL_PROVEN",
+          "registryVersion": 1,
+          "controlCurrent": true,
+          "codeCurrent": null
+        }
+      ],
+      "expectedIndex": 1
+    },
+    {
+      "name": "live proof beats stale proof",
+      "registrations": [
+        {
+          "provenance": "CONTROL_PROVEN",
+          "registryVersion": 2,
+          "controlCurrent": false,
+          "codeCurrent": true
+        },
+        {
+          "provenance": "CONTROL_PROVEN",
+          "registryVersion": 1,
+          "controlCurrent": true,
+          "codeCurrent": null
+        }
+      ],
+      "expectedIndex": 1
+    },
+    {
+      "name": "stale proof beats a self-attested claim",
+      "registrations": [
+        {
+          "provenance": "SELF_ATTESTED",
+          "registryVersion": 2,
+          "controlCurrent": false,
+          "codeCurrent": true
+        },
+        {
+          "provenance": "CONTROL_PROVEN",
+          "registryVersion": 1,
+          "controlCurrent": false,
+          "codeCurrent": null
+        }
+      ],
+      "expectedIndex": 1
+    },
+    {
+      "name": "tie goes to the newest registry",
+      "registrations": [
+        {
+          "provenance": "CONTROL_PROVEN",
+          "registryVersion": 2,
+          "controlCurrent": true,
+          "codeCurrent": true
+        },
+        {
+          "provenance": "CONTROL_PROVEN",
+          "registryVersion": 1,
+          "controlCurrent": true,
+          "codeCurrent": null
+        }
+      ],
+      "expectedIndex": 0
+    },
+    {
+      "name": "tie between stale records goes to the newest",
+      "registrations": [
+        {
+          "provenance": "CONTROL_PROVEN",
+          "registryVersion": 2,
+          "controlCurrent": false,
+          "codeCurrent": true
+        },
+        {
+          "provenance": "CONTROL_PROVEN",
+          "registryVersion": 1,
+          "controlCurrent": false,
+          "codeCurrent": null
+        }
+      ],
+      "expectedIndex": 0
+    },
+    {
+      "name": "all self-attested: newest",
+      "registrations": [
+        {
+          "provenance": "SELF_ATTESTED",
+          "registryVersion": 2,
+          "controlCurrent": false,
+          "codeCurrent": true
+        },
+        {
+          "provenance": "SELF_ATTESTED",
+          "registryVersion": 1,
+          "controlCurrent": null,
+          "codeCurrent": null
+        }
+      ],
+      "expectedIndex": 0
+    },
+    {
+      "name": "only NONE records",
+      "registrations": [
+        {
+          "provenance": "NONE",
+          "registryVersion": 2,
+          "controlCurrent": false,
+          "codeCurrent": false
+        }
+      ],
+      "expectedIndex": null
+    }
+  ]
+}

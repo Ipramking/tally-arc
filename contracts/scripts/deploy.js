@@ -1,31 +1,40 @@
 const { ethers, network } = require("hardhat");
+const { findChain, explorerAddress } = require("./lib");
 
+// Deploys a Tally registry.
+//
+//   npx hardhat run scripts/deploy.js --network arcTestnet
+//   CONTRACT=TallyRegistry npx hardhat run scripts/deploy.js --network arc   (legacy v1)
+//
+// Defaults to TallyRegistryV2. Add the printed registry to chains.json
+// (newest first) and run `npm run chains:sync` from the repo root.
 async function main() {
+  const name = process.env.CONTRACT || "TallyRegistryV2";
+  const version = name.endsWith("V2") ? 2 : 1;
+
   const [deployer] = await ethers.getSigners();
+  if (!deployer) throw new Error("No deployer account. Set DEPLOYER_PRIVATE_KEY in contracts/.env");
   const net = await ethers.provider.getNetwork();
+  const chain = findChain(net.chainId);
+  const symbol = chain?.nativeCurrency.symbol ?? "native token";
 
   console.log(`Network:  ${network.name} (chainId ${net.chainId})`);
   console.log(`Deployer: ${deployer.address}`);
+  console.log(`Balance:  ${ethers.formatEther(await ethers.provider.getBalance(deployer.address))} ${symbol}`);
 
-  const balance = await ethers.provider.getBalance(deployer.address);
-  // On Arc the native balance IS USDC (18 decimals at protocol level).
-  console.log(`Balance:  ${ethers.formatEther(balance)} USDC (native gas)`);
-
-  const Registry = await ethers.getContractFactory("TallyRegistry");
+  const Registry = await ethers.getContractFactory(name);
   const registry = await Registry.deploy();
   await registry.waitForDeployment();
-
   const address = await registry.getAddress();
-  const explorer =
-    net.chainId === 5042002n
-      ? "https://explorer.testnet.arc.io"
-      : "https://explorer.arc.io";
 
-  console.log(`\nTallyRegistry deployed at: ${address}`);
-  console.log(`Domain separator:          ${await registry.domainSeparator()}`);
-  console.log(`\nExplorer: ${explorer}/address/${address}`);
+  console.log(`\n${name} deployed at: ${address}`);
+  console.log(`Domain separator: ${await registry.domainSeparator()}`);
+  const link = explorerAddress(net.chainId, address);
+  if (link) console.log(`Explorer: ${link}`);
   console.log(
-    `\nSet this everywhere:\n  REGISTRY_ADDRESS=${address}`
+    `\nNext: add to chains.json -> chains[key=${chain?.key ?? "<your chain>"}].registries (newest first):\n` +
+      `  { "version": ${version}, "address": "${address}" }\n` +
+      `then run: npm run chains:sync`,
   );
 }
 

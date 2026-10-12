@@ -1,35 +1,25 @@
 const { ethers, network } = require("hardhat");
+const { explorerAddress } = require("./lib");
 
-// Deploys a tiny Ownable target the deployer owns, so the full provenance
-// flow can be exercised end-to-end: register it in the studio and it becomes
-// OWNER_PROVEN (the green "Tally Verified" badge). Handy for the demo / dry-run.
+// Deploys a tiny Ownable target (OwnableTarget) owned by the deployer, so you
+// can register it and see a control-proven record end to end.
 //
-//   npm run deploy:demo:arcTestnet   (free — fund via faucet.circle.com)
-//   npm run deploy:demo:arc          (mainnet — spends real USDC gas)
+//   npx hardhat run scripts/deploy-demo.js --network arcTestnet
 async function main() {
   const [deployer] = await ethers.getSigners();
+  if (!deployer) throw new Error("No deployer account. Set DEPLOYER_PRIVATE_KEY in contracts/.env");
   const net = await ethers.provider.getNetwork();
 
-  console.log(`Network:  ${network.name} (chainId ${net.chainId})`);
-  console.log(`Deployer/owner: ${deployer.address}`);
-
-  const Ownable = await ethers.getContractFactory("OwnableTarget");
-  const target = await Ownable.deploy(deployer.address);
+  const Target = await ethers.getContractFactory("OwnableTarget");
+  const target = await Target.deploy(deployer.address);
   await target.waitForDeployment();
-
   const address = await target.getAddress();
-  const explorer =
-    net.chainId === 5042002n
-      ? "https://explorer.testnet.arc.io"
-      : "https://explorer.arc.io";
 
-  console.log(`\nDemo OwnableTarget deployed at: ${address}`);
-  console.log(`owner() = ${await target.owner()}`);
-  console.log(`Explorer: ${explorer}/address/${address}`);
-  console.log(
-    `\nRegister this address in the studio while connected as the owner` +
-      `\nwallet — it will resolve to OWNER_PROVEN (green "Tally Verified").`
-  );
+  console.log(`Network: ${network.name} (chainId ${net.chainId})`);
+  console.log(`OwnableTarget deployed at: ${address}`);
+  console.log(`Owner: ${deployer.address}`);
+  const link = explorerAddress(net.chainId, address);
+  if (link) console.log(`Explorer: ${link}`);
 }
 
 main().catch((error) => {

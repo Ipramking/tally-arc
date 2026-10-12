@@ -1,11 +1,14 @@
 {
   "name": "tally-contracts",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "TallyRegistry — on-chain contract provenance for Arc Mainnet",
+  "description": "Tally registry contracts: on-chain contract provenance for EVM chains",
   "scripts": {
     "build": "hardhat compile",
     "test": "hardhat test",
+    "deploy": "hardhat run scripts/deploy.js",
+    "deploy:demo": "hardhat run scripts/deploy-demo.js",
+    "register": "hardhat run scripts/register.js",
     "deploy:arc": "hardhat run scripts/deploy.js --network arc",
     "deploy:arcTestnet": "hardhat run scripts/deploy.js --network arcTestnet",
     "deploy:demo:arc": "hardhat run scripts/deploy-demo.js --network arc",
