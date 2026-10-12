@@ -1,47 +1,45 @@
-import type { Metadata } from "next";
-import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
-import { Providers } from "./providers";
+import type { Metadata, Viewport } from "next";
+import "@fontsource/ibm-plex-sans/latin-400.css";
+import "@fontsource/ibm-plex-sans/latin-500.css";
+import "@fontsource/ibm-plex-sans/latin-600.css";
+import "@fontsource/ibm-plex-sans/latin-700.css";
+import "@fontsource/ibm-plex-mono/latin-400.css";
+import "@fontsource/ibm-plex-mono/latin-500.css";
+import "@fontsource/ibm-plex-mono/latin-600.css";
 import "./globals.css";
+import { STUDIO_URL } from "@/lib/chain";
 
-// Self-hosted at build time - no runtime Google Fonts request. Plex Sans carries
-// the display/body voice; Plex Mono is leaned on for Tally's native vernacular:
-// addresses, hashes, signatures, network params.
-const plexSans = IBM_Plex_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-display",
-  display: "swap",
-});
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-mono",
-  display: "swap",
-});
+// Every page is rendered per request so the Content-Security-Policy nonce
+// created in proxy.ts can be applied to the framework's scripts.
+export const dynamic = "force-dynamic";
 
-const title = "Tally · Contract Provenance for Arc Mainnet";
+const title = "Tally: contract provenance you can check";
 const description =
-  "Know the code before you sign. Tally proves, on-chain, that a deployed Arc contract is linked to its public source. Owner-proven, not just claimed.";
+  "Know the code before you sign. Tally links a deployed contract to its public source, and only says verified when the on-chain proof, the live code and the repository agree.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://tally-studio.vercel.app"),
-  title,
+  metadataBase: new URL(STUDIO_URL),
+  title: { default: title, template: "%s | Tally" },
   description,
   openGraph: { title, description, siteName: "Tally", type: "website" },
   twitter: { card: "summary_large_image", title, description },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export const viewport: Viewport = {
+  themeColor: "#0a0a0b",
+  colorScheme: "dark",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${plexSans.variable} ${plexMono.variable}`}>
+    <html lang="en">
       <body>
-        {/* Film grain - a fixed, subtle texture across every surface. */}
+        {/* Film grain: a fixed, subtle texture across every surface. */}
         <div className="grain" aria-hidden="true" />
-        <Providers>{children}</Providers>
+        <a className="skip" href="#main">
+          Skip to content
+        </a>
+        {children}
       </body>
     </html>
   );
