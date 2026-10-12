@@ -2,136 +2,126 @@
   <img src="brand/png/tally-lockup-ink.png" alt="Tally" width="360" />
 </p>
 
-# Tally — Pre-Flight Contract Provenance for Arc Mainnet
+# Tally: contract provenance you can check
 
-Tally links a deployed contract on **Arc Mainnet** (Chain ID `5042`, USDC as
-native gas) to its **public source repository**, and **proves control
-on-chain** rather than merely asserting it.
+Tally links a deployed smart contract to its public source repository and makes
+that link **checkable**. A contract is only shown as **verified** when three
+independent things agree:
 
-On Arc, gas is settled in USDC, so a single malicious `approve` or contract call
-drains real dollars. Tally gives users a fast, honest trust signal *before* they
-sign, and gives developers a durable, verifiable link between their bytecode and
-their code.
+1. **Control**: the signer proved on-chain that they own, administer or deployed
+   the contract, and still do.
+2. **Code**: the bytecode at the address is unchanged since the record was written.
+3. **Source**: the repository's `tally.json` lists this contract on this network.
 
-> This repo is the shipped vertical slice for **Circle's Arc Microgrants**
-> (DoraHacks). It is intentionally small and end-to-end: a deployed contract, a
-> browser badge, and a one-signature register flow.
+Anything less is labelled for what it is. Built for [Arc](https://arc.io), where
+gas is paid in USDC and a bad approval costs real dollars; it works on any EVM chain
+you add to [`chains.json`](chains.json).
 
-**Live studio:** https://tally-studio.vercel.app  ·  **Register:** https://tally-studio.vercel.app/register
+**Studio:** https://tally-studio.vercel.app
 
----
+## Status
 
-## What's inside
+| | |
+|---|---|
+| Registry **v1** on Arc mainnet (chain 5042) | [`0x459Cab32306c439a408cA6b8672CcF6c6A0536d9`](https://explorer.arc.io/address/0x459Cab32306c439a408cA6b8672CcF6c6A0536d9). Deployed and immutable. Still read by every client, capped at **control proven** (it cannot see code changes). |
+| Registry **v2** | Implemented and tested ([`TallyRegistryV2.sol`](contracts/contracts/TallyRegistryV2.sol)). **Not deployed yet**; see [docs/deploy-v2.md](docs/deploy-v2.md). Until it is, nothing can reach **verified**. |
+| Demo contract | [`0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb`](https://explorer.arc.io/address/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb), listed in this repo's [`tally.json`](tally.json) |
+| External audit | None yet. See [docs/security.md](docs/security.md) for what has and has not been checked. |
+
+## Trust levels
+
+Every surface (explorer badge, README badge, record page) uses the same rule, so
+what you see is what the chain supports.
+
+| Level | Colour | Meaning |
+|---|---|---|
+| **Verified** | green | v2 record, control proven and still held, code unchanged, repository confirms. |
+| **Control proven** | blue | Control proven and still held, but the repository is unconfirmed, or the record is on legacy v1. |
+| **Stale** | amber | Control moved to someone else, or the code changed after registration. Treated as void. |
+| **Self-attested** | grey | A claim with no on-chain proof. Only possible for contracts that have no owner. Never green. |
+| **Unverified** | red | No record exists. |
+| **Unavailable** | hollow | The chain or registry could not be read. Never shown as unverified: failing to look is not the same as finding nothing. |
+
+## What is in the repo
 
 | Path | What it is |
 |---|---|
-| [`contracts/`](contracts) | `TallyRegistry.sol` + Hardhat tests + Arc deploy script |
-| [`extension/`](extension) | Manifest V3 Chrome extension — injects badges on `explorer.arc.io`, 1-click evaluator presets |
-| [`studio/`](studio) | Next.js app — `/register` EIP-712 sign flow + dynamic Markdown badge API |
+| [`contracts/`](contracts) | `TallyRegistryV2.sol` (EIP-712, ERC-1271, code-hash tracking), the original `TallyRegistry.sol` (v1, deployed, untouched), Hardhat tests, deploy and register scripts |
+| [`studio/`](studio) | Next.js app: record pages with the evidence behind every level, the register flow, a live SVG badge API |
+| [`extension/`](extension) | Manifest V3 Chrome extension: badges on the block explorer and a lookup popup |
+| [`chains.json`](chains.json) | The single source of truth for networks and registry addresses |
+| [`tally.json`](tally.json) | This repository's own provenance file (see below) |
+| [`docs/`](docs) | [Security model](docs/security.md), [deploying v2](docs/deploy-v2.md), [adding a chain](docs/adding-a-chain.md) |
 
-## The core idea: *enforced* provenance
+## Using Tally
 
-The registry does **not** pretend to verify things it can't. Two levels:
+**Register a contract.** Open the studio's [register page](https://tally-studio.vercel.app/register),
+connect the wallet that controls the contract, and sign one EIP-712 message. The
+registry checks `owner()`, the default admin role, or the deployer address, and
+records the code hash. Anyone may relay the signature.
 
-- **`OWNER_PROVEN`** — the target contract exposes `owner()` and the signer
-  **is** that owner. Strong, on-chain-verifiable link. This is the only state
-  shown as **"Tally Verified"** (green).
-- **`SELF_ATTESTED`** — the target has no `owner()` surface (an EOA or a
-  non-Ownable contract). The claim is recorded but shown as **"Self-attested
-  (unproven)"** (blue), never as verified.
+**Publish `tally.json`.** Commit this file to the root of the repository you
+registered, on the default branch:
 
-Anyone attempting to register a contract they don't own is **reverted** — see
-the passing test `REJECTS an attacker trying to claim provenance…`.
-
-## Quick start
-
-### 1. Contracts
-
-```bash
-cd contracts
-npm install
-npm test            # 4 passing, incl. the anti-squat security test
-cp .env.example .env   # add DEPLOYER_PRIVATE_KEY (wallet funded with USDC)
-npm run deploy:arc     # deploys to Arc Mainnet, prints the address
+```json
+{
+  "version": 1,
+  "contracts": [
+    { "chainId": 5042, "address": "0xYourContract" }
+  ]
+}
 ```
 
-Take the printed `REGISTRY_ADDRESS` and paste it into:
-- `extension/config.js` → `REGISTRY_ADDRESS`
-- `studio/.env.local` → `NEXT_PUBLIC_REGISTRY_ADDRESS`
+Clients read it from `https://raw.githubusercontent.com/<owner>/<repo>/HEAD/tally.json`.
+Without it a record stays at **control proven**.
 
-### 2. Studio (register flow + badge API)
+**Add a badge to your README.**
 
-```bash
-cd studio
-npm install
-cp .env.local.example .env.local   # set NEXT_PUBLIC_REGISTRY_ADDRESS
-npm run dev                        # http://localhost:3000
+```markdown
+![Tally](https://tally-studio.vercel.app/api/badge/0xYourContract?chain=arc)
 ```
 
-- `/register?address=0x…` — connect wallet, sign EIP-712, submit on Arc.
-- `/api/badge/0x…` — live SVG badge:
-  `![Tally](https://tally-studio.vercel.app/api/badge/0xYourContract)`
+**Install the extension.** There is no store listing yet. Open `chrome://extensions`,
+turn on Developer mode, choose **Load unpacked**, and select the [`extension/`](extension)
+folder. Visit any address page on the Arc explorer, or use the toolbar popup to look
+up an address.
 
-> Tip: rehearse the whole flow for free on **Arc Testnet** first
-> (`NEXT_STEPS.md` → Phase 0): `npm run deploy:arcTestnet`, fund via
-> `faucet.circle.com`, set `NEXT_PUBLIC_ARC_CHAIN_ID=5042002`.
+## Development
 
-### 3. Extension
+Node 22.12 or newer. Each package installs its own dependencies.
 
 ```bash
-cd extension
-node make-icons.js   # generates icons/ (only needed once)
+npm --prefix contracts ci && npm --prefix studio ci && npm --prefix extension ci
+
+npm test                  # chain-table check, then contracts, studio and extension tests
+npm run chains:sync       # regenerate client config after editing chains.json
+npm --prefix studio run dev   # http://localhost:3000
 ```
 
-Then load `extension/` as an **unpacked** extension at `chrome://extensions`
-(Developer mode on). Visit an `explorer.arc.io/address/0x…` page, or click the
-toolbar icon and use the 1-click demo presets.
+| Suite | Command | What it covers |
+|---|---|---|
+| Contracts | `npm run test:contracts` | v2 behaviour, hostile targets, v1 limitations pinned, and that the studio's ABIs and EIP-712 types match the real contracts |
+| Studio | `npm run test:studio` | trust-level logic, registry decoding, hardened RPC, repository proof, register flow, badge, CSP |
+| Extension | `npm run test:extension` | the same shared test vectors, service worker, content script, popup, manifest rules |
 
-## Verified Arc parameters (as of Sep 2026)
+The studio also has `npm run typecheck`, `npm run lint` and `npm run build`; all of it
+runs in [CI](.github/workflows/ci.yml).
 
-| | |
-|---|---|
-| Chain ID | `5042` (`0x13b2`) |
-| RPC | `https://rpc.mainnet.arc.io` |
-| Explorer | `https://explorer.arc.io` |
-| Native gas | USDC (18 decimals at protocol level) |
+## Security
 
-Source: [arc.io](https://arc.io) / docs.arc.io. Always confirm endpoints there
-to avoid phishing RPCs.
+See [SECURITY.md](SECURITY.md) to report a vulnerability and
+[docs/security.md](docs/security.md) for the threat model, what each control does, and the
+known limits. Short version: everything read from a registry or a repository is treated
+as hostile input, clients fail towards "unavailable" rather than a misleading answer, and
+the registry has no owner, no upgrade path and no admin key.
 
-## How Arc is used (microgrant requirement)
+## Configuration
 
-- **Deployment target:** `TallyRegistry.sol` lives on Arc Mainnet.
-- **Native USDC gas:** registration transactions pay gas in USDC; the deploy
-  script reports the deployer's USDC balance as native currency.
-- **EIP-712 domain** is pinned to `chainId 5042`, so signatures are only valid
-  for Arc.
-- The extension and badge API read Arc state directly over `rpc.mainnet.arc.io`.
-
-## Live on Arc Mainnet (chain 5042)
-
-| | |
-|---|---|
-| `TallyRegistry` | [`0x459Cab32306c439a408cA6b8672CcF6c6A0536d9`](https://explorer.arc.io/address/0x459Cab32306c439a408cA6b8672CcF6c6A0536d9) |
-| Verified demo (owner-proven) | [`0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb`](https://explorer.arc.io/address/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb) |
-| Register tx (verifiable) | [`0xc8a7…63c3`](https://explorer.arc.io/tx/0xc8a79672f610ef92d82edd154364bba45300acfb46ab981e0015ac19389d63c3) |
-| Studio | [tally-studio.vercel.app](https://tally-studio.vercel.app) |
-| Live badge (demo) | [`/api/badge/0x0f399…0cCb`](https://tally-studio.vercel.app/api/badge/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb) · [provenance page](https://tally-studio.vercel.app/c/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb) |
-
-## Submission checklist
-
-- [x] `TallyRegistry.sol` — enforced provenance, 4 passing Hardhat tests (incl. anti-squat)
-- [x] Public repo — [github.com/Ipramking/tally-arc](https://github.com/Ipramking/tally-arc)
-- [x] Studio live on Vercel — [tally-studio.vercel.app](https://tally-studio.vercel.app) (`/register` EIP-712 flow + badge API)
-- [x] MV3 extension — badge injection + 1-click evaluator presets
-- [x] Testnet dry-run wired end-to-end (chain `5042002`, one env switch)
-- [x] **Deployed to Arc Mainnet** — registry `0x459Cab32306c439a408cA6b8672CcF6c6A0536d9`
-- [x] `NEXT_PUBLIC_REGISTRY_ADDRESS` set on Vercel + `extension/config.js` wired (mainnet)
-- [x] Demo target registered → real evaluator presets (owner-proven, live)
-- [x] Anti-squat verified live on mainnet with an independent (non-owner) wallet
-- [x] **DoraHacks submission** under Arc Microgrants
-- [ ] 1-minute demo video (optional — not required for eligibility)
+Networks, RPC endpoints, explorers and registry addresses live in
+[`chains.json`](chains.json). Edit it, run `npm run chains:sync`, and the studio, the
+extension (including its manifest host permissions) and the Hardhat networks follow.
+See [docs/adding-a-chain.md](docs/adding-a-chain.md).
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
