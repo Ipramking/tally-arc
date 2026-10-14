@@ -1,6 +1,7 @@
-# Tally — Arc Microgrants submission
+# Tally: project summary
 
-Copy-paste blocks for the DoraHacks Arc Microgrants form.
+Copy-paste blocks for grant forms and applications. Keep it in step with the code: the
+claims below are the ones the current repository supports.
 
 ---
 
@@ -8,71 +9,70 @@ Copy-paste blocks for the DoraHacks Arc Microgrants form.
 Tally
 
 ## Tagline
-Pre-flight contract provenance for Arc mainnet. Know the code before you sign.
+Contract provenance you can check. Know the code before you sign.
 
-## Live deployment (open these)
-- Studio (reads Arc mainnet live): https://tally-studio.vercel.app
-- Registry contract on Arc mainnet: https://explorer.arc.io/address/0x459Cab32306c439a408cA6b8672CcF6c6A0536d9
-- A verified, owner-proven contract: https://tally-studio.vercel.app/c/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb
-
-## Public repo
-https://github.com/Ipramking/tally-arc
-
-## Public builder profile
-https://github.com/Ipramking
+## Links
+- Studio: https://tally-studio.vercel.app
+- Registry v1 on Arc mainnet: https://explorer.arc.io/address/0x459Cab32306c439a408cA6b8672CcF6c6A0536d9
+- Demo contract and its record: https://tally-studio.vercel.app/c/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb
+- Public repo: https://github.com/Ipramking/tally-arc
+- Builder profile: https://github.com/Ipramking
 
 ---
 
 ## Short description (what it does)
-Tally links a deployed Arc contract to its public source repository and proves
-that link on-chain instead of merely asserting it. If a contract exposes
-`owner()`, only that owner can register it, and the registry enforces this: any
-other signer is reverted. That record is the only state shown as "Tally
-Verified" (green). Contracts with no ownership surface (an EOA or a non-Ownable
-contract) are recorded as "self-attested" and clearly labelled unproven, never
-faked as verified.
+Tally links a deployed smart contract to its public source repository and makes that
+link checkable instead of merely asserted. A registry records that the signer proved
+control of the contract on-chain (as its owner, an admin, or its deployer) together with
+the contract's code hash. A contract only shows as **verified** when that proof still holds,
+the code is unchanged, and the repository's own `tally.json` lists the contract. Anything
+less is labelled for what it is: control proven, stale, self-attested, unverified, or
+unavailable.
 
-Three surfaces sit on one on-chain registry:
-- A Manifest V3 Chrome extension that injects trust badges (Verified /
-  Self-attested / Unverified) onto the Arc block explorer, so users get an
-  honest signal before they sign.
-- A Next.js studio with a one-signature EIP-712 register flow, a human-readable
-  provenance page at `/c/<address>`, and a live SVG badge API for READMEs.
-- `TallyRegistry.sol`, deployed on Arc mainnet, with a passing test suite that
-  includes the anti-squat security test.
+Three surfaces share one decision rule:
+- A Manifest V3 Chrome extension that tags addresses on the block explorer.
+- A Next.js studio with a one-signature EIP-712 register flow, record pages that show the
+  evidence behind every level, and a live SVG badge for READMEs.
+- `TallyRegistryV2.sol` (EIP-712, ERC-1271, code-hash tracking, no owner and no upgrade
+  path), alongside the original `TallyRegistry.sol` that is deployed on Arc mainnet.
 
 ## How it uses Arc
-Arc is the whole reason the product exists. Because Arc settles gas in native
-USDC, account balances and fees are denominated in dollars, so a single
-malicious approval or contract call drains real, liquid dollars. Tally surfaces
-a trust signal at exactly that moment: before you sign.
+Arc settles gas in native USDC, so a single malicious approval or contract call costs real
+dollars. Tally puts a trust signal in front of the user at exactly that moment.
 
-Concretely on Arc mainnet (chain ID 5042):
-- `TallyRegistry` is deployed and read on Arc mainnet.
-- Registrations are transactions paid in Arc's native USDC gas.
-- The EIP-712 signing domain is pinned to chain 5042, so a signature is valid
-  only on Arc.
-- The extension and the badge API read Arc state directly over
-  `rpc.mainnet.arc.io`.
+On Arc mainnet (chain ID 5042):
+- The v1 registry is deployed and read live by every client.
+- Registrations are transactions paid in Arc's native USDC gas, and the EIP-712 signing domain
+  is bound to the chain and the registry address.
+- The extension and the badge API read Arc state directly over its public RPC. Networks and
+  registry addresses live in one file, `chains.json`, so adding another chain is a one-file change.
 
-## Technical credibility (verified on mainnet)
-- Provenance is enforced, not asserted: registering a contract you do not own
-  reverts on-chain (verified live with an independent wallet, not the deployer).
-- The registry supports relayed registration: the owner signs off-chain and
-  pays no gas; a relayer submits and pays the USDC gas. Demonstrated on mainnet.
-- `TallyRegistry.sol` ships with a Hardhat suite (4 passing, including the
-  anti-squat test) and a free testnet dry-run path.
+## Technical credibility
+- The security model is written down, including what Tally does **not** claim (it is not an
+  audit, and it does not prove a repository builds to the deployed bytecode):
+  `docs/security.md`.
+- The v1 registry's weaknesses are pinned by tests, and v2 fixes them (rank-based updates so
+  squatters cannot lock anyone out, ERC-1271 for multisig owners, code-hash tracking, validated
+  repository strings, gas-capped probes of hostile contracts).
+- The studio's ABIs and EIP-712 types, and the extension's byte-level decoder, are checked against
+  the real compiled contracts, and all three packages run in CI.
+- Clients treat every registry and repository string as hostile input: strict link parsing,
+  text-only rendering, a nonce-based Content-Security-Policy, and a failure to read the chain
+  shows "unavailable" rather than a misleading "unverified".
+- Honest status: v2 is implemented and tested but not yet deployed, and has not had an external
+  audit.
 
-## What's next (worth taking further)
+## What's next
+- Deploy v2 and run an external audit before real value depends on it.
 - A hosted, gasless relayer so users register with a signature and zero gas.
-- CI auto-registration on release tags (bind a release to its source at ship
-  time).
-- Richer pre-sign risk signals in the extension (allowance/approval inspection).
+- CI auto-registration on release tags, binding a release to its source at ship time.
+- Reproducible-build verification, so "verified" can eventually say the source compiles to the
+  deployed bytecode.
 
 ## On-chain addresses (Arc mainnet, chain 5042)
-- TallyRegistry: `0x459Cab32306c439a408cA6b8672CcF6c6A0536d9`
-- Verified demo contract (owner-proven): `0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb`
+- Registry v1: `0x459Cab32306c439a408cA6b8672CcF6c6A0536d9`
+- Demo contract: `0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb`
 
 ## Payout wallet
-Provide a fresh, secure wallet that can receive USDC on Arc. Do not use the
-deployer wallet from development.
+Provide a fresh, secure wallet that can receive USDC on Arc. Do not use the deployer wallet
+from development.

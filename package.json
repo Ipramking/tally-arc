@@ -1,0 +1,15 @@
+{
+  "name": "tally",
+  "private": true,
+  "description": "Tally: on-chain contract provenance. Monorepo helper scripts; each package has its own dependencies.",
+  "license": "MIT",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "chains:sync": "node scripts/sync-chains.mjs",
+    "chains:check": "node scripts/sync-chains.mjs --check",
+    "test:contracts": "npm --prefix contracts test",
+    "test:studio": "npm --prefix studio test",
+    "test:extension": "npm --prefix extension test",
+    "test": "npm run chains:check && npm run test:contracts && npm run test:studio && npm run test:extension"
+  }
+}

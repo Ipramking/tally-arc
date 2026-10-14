@@ -20,36 +20,45 @@
         </svg>
         <span class="name">TALLY</span>
       </div>
-      <span class="net">Arc &middot; 5042</span>
+      <label class="net" for="chain">
+        <span class="sr-only">Network</span>
+        <select id="chain"></select>
+      </label>
     </header>
 
-    <p class="sub">Pre-flight contract provenance. Check before you sign.</p>
+    <p class="sub">Contract provenance, checked before you sign.</p>
 
-    <div class="row">
+    <form id="form" class="row" autocomplete="off">
       <input
         id="addr"
         type="text"
-        placeholder="0x… contract address"
+        placeholder="0x&hellip; contract address"
+        aria-label="Contract address"
         autocomplete="off"
         spellcheck="false"
       />
-      <button id="check">Check</button>
+      <button id="check" type="submit">Check</button>
+    </form>
+
+    <div id="presets" class="presets hidden">
+      <span class="presets-label">Try:</span>
+      <button class="preset" type="button" data-preset="verified">Registered contract</button>
+      <button class="preset" type="button" data-preset="unverified">Unregistered address</button>
     </div>
 
-    <div class="presets">
-      <span class="presets-label">1-click demo:</span>
-      <button class="preset" data-preset="VERIFIED">Verified contract</button>
-      <button class="preset" data-preset="UNVERIFIED">Unverified spender</button>
-    </div>
-
-    <div id="result" class="result hidden"></div>
+    <div id="result" class="result hidden" role="status" aria-live="polite"></div>
 
     <footer>
-      <a id="studioLink" href="#" target="_blank">Open Tally Studio →</a>
+      <a id="studioLink" href="#" target="_blank" rel="noopener noreferrer">Open Tally Studio &rarr;</a>
     </footer>
 
-    <script src="../config.js"></script>
+    <script src="../chains.generated.js"></script>
+    <script src="../lib/net.js"></script>
+    <script src="../lib/safe-url.js"></script>
     <script src="../lib/registry.js"></script>
+    <script src="../lib/repo-proof.js"></script>
+    <script src="../lib/status.js"></script>
+    <script src="../lib/lookup.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

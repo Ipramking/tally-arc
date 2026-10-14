@@ -1,84 +1,132 @@
-const cfg = globalThis.TALLY_CONFIG;
-const $ = (id) => document.getElementById(id);
+// Popup: look up any address on any configured chain. Runs under the
+// extension's host permissions, so it calls the lookup library directly.
+// Built entirely with DOM APIs and textContent: nothing from the chain is ever
+// parsed as HTML, and links are only created from validated URLs.
+/* global TALLY_CHAINS, TallySafeUrl, TallyStatus, TallyLookup */
+(function () {
+  "use strict";
 
-document.getElementById("studioLink").href = cfg.STUDIO_URL;
+  const config = globalThis.TALLY_CHAINS;
+  const safe = globalThis.TallySafeUrl;
+  const status = globalThis.TallyStatus;
+  const $ = (id) => document.getElementById(id);
 
-function shorten(a) {
-  return a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "";
-}
-
-function render(address, reg) {
-  const box = $("result");
-  box.classList.remove("hidden");
-
-  if (!reg || reg.provenance === "NONE") {
-    box.className = "result unverified";
-    box.innerHTML = `
-      <div class="badge">&#9888; Unverified</div>
-      <p>No provenance record on Arc for <code>${shorten(address)}</code>.</p>
-      <a class="cta" href="${cfg.STUDIO_URL}/register?address=${address}" target="_blank">Register this contract →</a>`;
-    return;
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
   }
 
-  if (reg.isVerified) {
-    box.className = "result verified";
-    box.innerHTML = `
-      <div class="badge">&#10003; Tally Verified <small>owner-proven</small></div>
-      <dl>
-        <dt>Repo</dt><dd><a href="${reg.githubRepo}" target="_blank">${reg.githubRepo}</a></dd>
-        <dt>Build</dt><dd><code>${reg.buildHash || "—"}</code></dd>
-        <dt>Owner</dt><dd><code>${shorten(reg.owner)}</code></dd>
-      </dl>`;
-    return;
+  function link(text, href) {
+    const a = el("a", "", text);
+    a.href = href;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    return a;
   }
 
-  // SELF_ATTESTED
-  box.className = "result selfattested";
-  box.innerHTML = `
-    <div class="badge">&#9679; Self-attested <small>unproven</small></div>
-    <p>Source was claimed, but on-chain ownership was <b>not</b> verified.</p>
-    <dl>
-      <dt>Repo</dt><dd><a href="${reg.githubRepo}" target="_blank">${reg.githubRepo}</a></dd>
-      <dt>Claimed by</dt><dd><code>${shorten(reg.owner)}</code></dd>
-    </dl>`;
-}
-
-async function lookup(address) {
-  const box = $("result");
-  box.classList.remove("hidden");
-  box.className = "result loading";
-  box.textContent = "Querying Arc…";
-  try {
-    const reg = await globalThis.TallyRegistry.getRegistration(address);
-    render(address, reg);
-  } catch (e) {
-    box.className = "result unverified";
-    box.textContent = `Lookup failed: ${e.message}`;
+  function currentChain() {
+    return safe.chainByKey(config, $("chain").value) || config.chains[0];
   }
-}
 
-$("check").addEventListener("click", () => {
-  const a = $("addr").value.trim();
-  if (/^0x[a-fA-F0-9]{40}$/.test(a)) lookup(a);
-  else {
+  function setBox(className) {
     const box = $("result");
-    box.classList.remove("hidden");
-    box.className = "result unverified";
-    box.textContent = "Enter a valid 0x… address.";
+    box.className = "result " + className;
+    box.replaceChildren();
+    return box;
   }
-});
 
-document.querySelectorAll(".preset").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const address = cfg.PRESETS[btn.dataset.preset];
-    if (!address || /^0x0+$/.test(address)) {
-      const box = $("result");
-      box.classList.remove("hidden");
-      box.className = "result unverified";
-      box.textContent = "Preset not configured yet (set it in config.js).";
+  function row(dl, term, valueNode) {
+    dl.append(el("dt", "", term), (() => {
+      const dd = el("dd");
+      dd.append(valueNode);
+      return dd;
+    })());
+  }
+
+  function render(chain, address, outcome) {
+    const level = outcome.level;
+    const meta = status.LEVELS[level] || status.LEVELS.unknown;
+    const box = setBox(level);
+
+    box.append(el("div", "badge", meta.label));
+    if (!outcome.ok) {
+      box.append(el("p", "", "Could not read " + chain.name + ": " + safe.displayText(outcome.error || "unknown error", 120)));
       return;
     }
-    $("addr").value = address;
-    lookup(address);
-  });
-});
+    box.append(el("p", "", status.describe(level, outcome.registration, outcome.repo)));
+
+    const reg = outcome.registration;
+    if (reg) {
+      const dl = el("dl");
+      row(dl, "Signer", el("code", "", safe.shorten(reg.signer)));
+      const parsed = safe.parseGithubRepo(reg.githubRepo);
+      row(dl, "Repo", parsed ? link(parsed.owner + "/" + parsed.repo, parsed.url) : el("span", "", safe.displayText(reg.githubRepo, 60) || "\u2014"));
+      if (reg.buildHash) row(dl, "Build", el("code", "", safe.displayText(reg.buildHash, 66)));
+      row(dl, "Registry", el("span", "", "v" + reg.registryVersion));
+      box.append(dl);
+    }
+
+    const href = level === "unverified" ? safe.studioRegisterUrl(config, chain, address) : safe.studioDetailUrl(config, chain, address);
+    const cta = link(level === "unverified" ? "Register this contract \u2192" : "Open full record \u2192", href);
+    cta.className = "cta";
+    box.append(cta);
+  }
+
+  async function check(address) {
+    const chain = currentChain();
+    const box = setBox("loading");
+    box.textContent = "Querying " + chain.name + "\u2026";
+    const outcome = await globalThis.TallyLookup.lookup({ chain, address, fetchImpl: fetch.bind(globalThis) });
+    render(chain, address, outcome);
+  }
+
+  function showError(message) {
+    const box = setBox("unknown");
+    box.textContent = message;
+  }
+
+  function refreshPresets() {
+    const chain = currentChain();
+    const presets = chain.presets || {};
+    $("presets").classList.toggle("hidden", !presets.verified && !presets.unverified);
+    document.querySelectorAll(".preset").forEach((button) => {
+      button.hidden = !presets[button.dataset.preset];
+    });
+  }
+
+  function init() {
+    for (const chain of config.chains) {
+      const option = el("option", "", chain.name + " \u00b7 " + chain.id);
+      option.value = chain.key;
+      $("chain").append(option);
+    }
+    $("chain").value = config.defaultChain;
+    $("studioLink").href = config.studioUrl;
+    refreshPresets();
+
+    $("chain").addEventListener("change", () => {
+      refreshPresets();
+      $("result").className = "result hidden";
+    });
+
+    $("form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const address = $("addr").value.trim();
+      if (safe.isAddress(address)) check(address);
+      else showError("Enter a valid 0x\u2026 address (42 characters).");
+    });
+
+    document.querySelectorAll(".preset").forEach((button) => {
+      button.addEventListener("click", () => {
+        const address = (currentChain().presets || {})[button.dataset.preset];
+        if (!address) return;
+        $("addr").value = address;
+        check(address);
+      });
+    });
+  }
+
+  init();
+})();

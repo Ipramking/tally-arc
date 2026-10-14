@@ -1,0 +1,267 @@
+{
+  "_comment": "Shared by studio/test and extension/test so the two implementations cannot drift.",
+  "parseGithubRepo": [
+    {
+      "input": "https://github.com/Ipramking/tally-arc",
+      "expected": {
+        "owner": "Ipramking",
+        "repo": "tally-arc",
+        "url": "https://github.com/Ipramking/tally-arc"
+      }
+    },
+    {
+      "input": "https://github.com/Ipramking/tally-arc/",
+      "expected": {
+        "owner": "Ipramking",
+        "repo": "tally-arc",
+        "url": "https://github.com/Ipramking/tally-arc"
+      }
+    },
+    {
+      "input": "https://github.com/owner/repo.git",
+      "expected": {
+        "owner": "owner",
+        "repo": "repo",
+        "url": "https://github.com/owner/repo"
+      }
+    },
+    {
+      "input": "https://github.com/owner/repo/tree/main/contracts",
+      "expected": {
+        "owner": "owner",
+        "repo": "repo",
+        "url": "https://github.com/owner/repo"
+      }
+    },
+    {
+      "input": "https://github.com/o/r",
+      "expected": {
+        "owner": "o",
+        "repo": "r",
+        "url": "https://github.com/o/r"
+      }
+    },
+    {
+      "input": "https://github.com/a-b-c/my_repo.v2",
+      "expected": {
+        "owner": "a-b-c",
+        "repo": "my_repo.v2",
+        "url": "https://github.com/a-b-c/my_repo.v2"
+      }
+    },
+    {
+      "input": "https://github.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/repo",
+      "expected": {
+        "owner": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "repo": "repo",
+        "url": "https://github.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/repo"
+      }
+    },
+    {
+      "input": "https://github.com/owner/rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+      "expected": {
+        "owner": "owner",
+        "repo": "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+        "url": "https://github.com/owner/rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr"
+      }
+    },
+    {
+      "input": "http://github.com/owner/repo",
+      "expected": null,
+      "why": "plain http"
+    },
+    {
+      "input": "https://GitHub.com/owner/repo",
+      "expected": null,
+      "why": "prefix is case-sensitive, like the contract"
+    },
+    {
+      "input": "https://github.com.evil.example/owner/repo",
+      "expected": null,
+      "why": "look-alike host"
+    },
+    {
+      "input": "https://evil.example/https://github.com/owner/repo",
+      "expected": null,
+      "why": "wrong host"
+    },
+    {
+      "input": "https://github.com@evil.example/owner/repo",
+      "expected": null,
+      "why": "userinfo trick"
+    },
+    {
+      "input": "https://github.com/owner",
+      "expected": null,
+      "why": "no repo"
+    },
+    {
+      "input": "https://github.com/owner/",
+      "expected": null,
+      "why": "no repo, trailing slash"
+    },
+    {
+      "input": "https://github.com/",
+      "expected": null,
+      "why": "empty"
+    },
+    {
+      "input": "https://github.com//repo",
+      "expected": null,
+      "why": "empty owner"
+    },
+    {
+      "input": "https://github.com/owner//repo",
+      "expected": null,
+      "why": "empty segment"
+    },
+    {
+      "input": "https://github.com/owner/../repo",
+      "expected": null,
+      "why": "dot-dot segment"
+    },
+    {
+      "input": "https://github.com/owner/..",
+      "expected": null,
+      "why": "repo is dot-dot"
+    },
+    {
+      "input": "https://github.com/owner/.",
+      "expected": null,
+      "why": "repo is dot"
+    },
+    {
+      "input": "https://github.com/-owner/repo",
+      "expected": null,
+      "why": "owner starts with hyphen"
+    },
+    {
+      "input": "https://github.com/owner-/repo",
+      "expected": null,
+      "why": "owner ends with hyphen"
+    },
+    {
+      "input": "https://github.com/own_er/repo",
+      "expected": null,
+      "why": "underscore in owner"
+    },
+    {
+      "input": "https://github.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/repo",
+      "expected": null,
+      "why": "owner too long"
+    },
+    {
+      "input": "https://github.com/owner/rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+      "expected": null,
+      "why": "repo too long"
+    },
+    {
+      "input": "https://github.com/owner/repo?tab=readme",
+      "expected": null,
+      "why": "query string"
+    },
+    {
+      "input": "https://github.com/owner/repo#readme",
+      "expected": null,
+      "why": "fragment"
+    },
+    {
+      "input": "https://github.com/owner/re po",
+      "expected": null,
+      "why": "space"
+    },
+    {
+      "input": "https://github.com/owner/rep\u00f6",
+      "expected": null,
+      "why": "non-ascii"
+    },
+    {
+      "input": "https://github.com/owner/repo\n",
+      "expected": null,
+      "why": "newline"
+    },
+    {
+      "input": "https://github.com/owner/repo\u202e",
+      "expected": null,
+      "why": "bidi override"
+    },
+    {
+      "input": "javascript:alert(1)",
+      "expected": null,
+      "why": "script scheme"
+    },
+    {
+      "input": "data:text/html,<script>alert(1)</script>",
+      "expected": null,
+      "why": "data scheme"
+    },
+    {
+      "input": "https://github.com/owner/<script>",
+      "expected": null,
+      "why": "markup"
+    },
+    {
+      "input": "https://github.com/owner/repo%2f..%2f",
+      "expected": null,
+      "why": "percent escapes"
+    },
+    {
+      "input": "https://github.com/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/",
+      "expected": null,
+      "why": "over 200 characters"
+    },
+    {
+      "input": "",
+      "expected": null,
+      "why": "empty string"
+    },
+    {
+      "input": null,
+      "expected": null,
+      "why": "null"
+    },
+    {
+      "input": 42,
+      "expected": null,
+      "why": "number"
+    }
+  ],
+  "isAddress": [
+    {
+      "input": "0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb",
+      "expected": true
+    },
+    {
+      "input": "0x0000000000000000000000000000000000000000",
+      "expected": true
+    },
+    {
+      "input": "0X0f399C0143CAd70b43D18a5696026B0cEdcA0cCb",
+      "expected": false
+    },
+    {
+      "input": "0x0f399C0143CAd70b43D18a5696026B0cEdcA0cC",
+      "expected": false
+    },
+    {
+      "input": "0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCbb",
+      "expected": false
+    },
+    {
+      "input": "0xzf399C0143CAd70b43D18a5696026B0cEdcA0cCb",
+      "expected": false
+    },
+    {
+      "input": " 0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb",
+      "expected": false
+    },
+    {
+      "input": "",
+      "expected": false
+    },
+    {
+      "input": null,
+      "expected": false
+    }
+  ]
+}

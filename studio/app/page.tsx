@@ -1,38 +1,74 @@
 import Link from "next/link";
+import { Nav } from "./components/Nav";
+import { StatusBadge } from "./components/StatusBadge";
+import { TallyMark } from "./components/TallyMark";
+import { chainLabel, defaultChain, STUDIO_URL } from "@/lib/chain";
+import { LEVELS, type Level } from "@/lib/status";
 
-/* Tally monogram - five-bar tally count (four strokes + a diagonal). The
-   product's namesake, used as the nav mark and the seal's center glyph. */
-function TallyMark({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <g
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      >
-        <line x1="5" y1="4" x2="5" y2="20" />
-        <line x1="10" y1="4" x2="10" y2="20" />
-        <line x1="15" y1="4" x2="15" y2="20" />
-        <line x1="20" y1="4" x2="20" y2="20" />
-        <line x1="3" y1="19" x2="22" y2="5" />
-      </g>
-    </svg>
-  );
-}
+const SOURCE_URL = "https://github.com/Ipramking/tally-arc";
+
+const LEVEL_COPY: { level: Level; title: string; text: string }[] = [
+  {
+    level: "verified",
+    title: "All three agree",
+    text: "Control proven on-chain and still held, the code unchanged since registration, and the repository's tally.json lists this contract. Checked live, every time.",
+  },
+  {
+    level: "control-proven",
+    title: "Control, no source link",
+    text: "The signer proved control and still holds it, but the repository does not confirm the contract yet. Legacy v1 records stop here because v1 cannot watch the code.",
+  },
+  {
+    level: "stale",
+    title: "The proof expired",
+    text: "Control moved to someone else, or the code at the address changed after it was registered. The record is treated as void.",
+  },
+  {
+    level: "self-attested",
+    title: "A claim, labelled as one",
+    text: "A repository was claimed with no on-chain proof. Only possible for contracts that have no owner, and it can never be shown as verified.",
+  },
+  {
+    level: "unverified",
+    title: "Nobody has vouched",
+    text: "No record exists. That is not the same as unsafe; it only means nobody has linked this code to a source.",
+  },
+  {
+    level: "unknown",
+    title: "Could not check",
+    text: "The network or the registry did not answer. Never shown as unverified, because failing to look is not the same as finding nothing.",
+  },
+];
+
+const LIMITS: { title: string; text: string }[] = [
+  {
+    title: "It is not an audit.",
+    text: "Verified says who vouches for a contract and where the source lives. It says nothing about whether that source is safe.",
+  },
+  {
+    title: "It does not prove the repository builds to the deployed bytecode.",
+    text: "That needs reproducible builds, which Tally does not do yet. The repository check proves the repo owner agrees, not that the code matches.",
+  },
+  {
+    title: "Repositories can change hands.",
+    text: "tally.json is read from the default branch at the moment you look. If a GitHub account is renamed or deleted, someone else can claim the old name.",
+  },
+  {
+    title: "Legacy v1 records are weaker.",
+    text: "The first registry cannot see ownership changes or code changes, so Tally checks ownership itself and caps v1 records at control proven.",
+  },
+];
 
 function Seal() {
-  const ring =
-    "TALLY · CONTRACT PROVENANCE · ON ARC MAINNET · TALLY · ON-CHAIN · ";
+  // 40 characters fill the circle exactly: the ring is 245 units around and each character takes about 6.
+  const ring = "TALLY - CONTRACT PROVENANCE - ON-CHAIN - ";
   return (
     <div className="seal" aria-hidden="true">
       <div className="halo" />
       <div className="ring-text">
         <svg viewBox="0 0 100 100">
           <defs>
-            <path
-              id="sealpath"
-              d="M50,50 m-39,0 a39,39 0 1,1 78,0 a39,39 0 1,1 -78,0"
-            />
+            <path id="sealpath" d="M50,50 m-39,0 a39,39 0 1,1 78,0 a39,39 0 1,1 -78,0" />
           </defs>
           <text>
             <textPath href="#sealpath" startOffset="0">
@@ -49,191 +85,182 @@ function Seal() {
 }
 
 export default function Home() {
+  const presets = defaultChain.presets;
+  const example = presets.verified ?? "0x0000000000000000000000000000000000000000";
+  const badge = `![Tally](${STUDIO_URL}/api/badge/0xYourContract?chain=${defaultChain.key})`;
+
   return (
     <>
-      <header className="wrap">
-        <nav className="nav">
-          <Link href="/" className="brand">
-            <TallyMark className="mark" />
-            <span className="name">Tally</span>
-          </Link>
-          <div className="nav-links">
-            <a href="#how" className="hide-sm">
-              How it works
-            </a>
-            <a href="#proof" className="hide-sm">
-              Proof model
-            </a>
-            <span className="chip mono">Arc mainnet · 5042</span>
-          </div>
-        </nav>
-      </header>
+      <Nav chip={chainLabel(defaultChain)}>
+        <a href="#proof" className="hide-sm">
+          Proof model
+        </a>
+        <a href="#how" className="hide-sm">
+          How it works
+        </a>
+      </Nav>
 
-      <main>
-        {/* Hero ---------------------------------------------------------- */}
+      <main id="main">
         <section className="wrap hero">
           <div>
             <div className="eyebrow reveal">
               <span className="dot" />
-              Arc Mainnet
-              <span className="sep">/</span>
-              USDC-native gas
-              <span className="sep">/</span>
-              <span style={{ color: "var(--taupe-dim)" }}>Pre-flight</span>
+              Contract provenance
             </div>
 
-            <h1 className="display reveal" style={{ animationDelay: "0.08s" }}>
+            <h1 className="display reveal d1">
               Know the code
               <br />
               <span className="dim">before you sign.</span>
             </h1>
 
-            <p className="lede reveal" style={{ animationDelay: "0.22s" }}>
-              On Arc, gas is settled in <b>real USDC</b>, so one malicious approval
-              drains actual dollars. Tally links a deployed contract to its public
-              source and <b>proves control on-chain</b>, so the badge you see is
-              earned, not merely claimed.
+            <p className="lede reveal d2">
+              Tally links a deployed contract to its public source and makes the link checkable. A contract only shows as{" "}
+              <b>verified</b> when the on-chain proof, the live code and the source repository all agree. Anything less is labelled for what it is.
             </p>
 
-            <div className="cta-row reveal" style={{ animationDelay: "0.34s" }}>
+            <div className="cta-row reveal d3">
               <Link href="/register" className="btn">
                 Register a contract
-                <span aria-hidden="true">→</span>
+                <span aria-hidden="true">&rarr;</span>
               </Link>
-              <Link href="/c/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb" className="btn-ghost">
-                <span className="u">See a provenance record</span>
-                <span className="arw">↗</span>
+              <Link href={`/c/${example}?chain=${defaultChain.key}`} className="btn-ghost">
+                <span className="u">See an example record</span>
+                <span className="arw" aria-hidden="true">
+                  &#8599;
+                </span>
               </Link>
             </div>
           </div>
 
-          <div className="seal-stage reveal" style={{ animationDelay: "0.2s" }}>
+          <div className="seal-stage reveal d2">
             <Seal />
           </div>
         </section>
 
-        {/* Proof model - the thesis ------------------------------------- */}
         <section id="proof" className="wrap section">
           <div className="section-head">
-            <h2 className="title">
-              Two states. Only one of them says verified.
-            </h2>
+            <h2 className="title">Verified means three things agree.</h2>
             <p className="sub">
-              Tally never pretends to verify what the chain can’t check. The
-              registry enforces the difference at registration time.
+              Registering a source link is easy to fake. So Tally checks the claim from three independent directions and only turns green when all of them hold.
             </p>
           </div>
 
-          <div className="states">
-            <div className="state">
-              <span className="badge proven">
-                <span className="swatch" /> Owner-proven
-              </span>
-              <h3>The signer is the owner</h3>
+          <div className="triad">
+            <div className="cell">
+              <h3>1. Control</h3>
               <p>
-                The target exposes <span className="mono">owner()</span> and the
-                signer <b>is</b> that owner. A strong, on-chain link, and the
-                only state shown as <span className="mono">Tally Verified</span>.
+                The signer proved on-chain that they own, administer or deployed the contract. The registry checks this itself when the record is written, and clients re-check it whenever someone looks.
               </p>
-              <div className="rule">
-                Anyone else who tries is reverted on-chain.
-              </div>
             </div>
-
-            <div className="state">
-              <span className="badge self">
-                <span className="swatch" /> Self-attested
-              </span>
-              <h3>A claim, labelled as one</h3>
+            <div className="cell">
+              <h3>2. Code</h3>
               <p>
-                The target has no ownership surface (an EOA or non-Ownable
-                contract). The claimed source is recorded but shown as{" "}
-                <b>unproven</b>: never green, never “verified”.
+                The registry stores the code hash at registration. If the bytecode at the address ever changes, the record goes stale instead of vouching for code nobody looked at.
               </p>
-              <div className="rule">
-                It can never overwrite an owner-proven record.
-              </div>
+            </div>
+            <div className="cell">
+              <h3>3. Source</h3>
+              <p>
+                The repository publishes a <span className="mono">tally.json</span> that lists the contract and its network. A claim about a repository that does not agree is never shown as verified.
+              </p>
             </div>
           </div>
         </section>
 
-        {/* How it works - a real sequence ------------------------------- */}
+        <section className="wrap section">
+          <div className="section-head">
+            <h2 className="title">Six states. One of them is green.</h2>
+            <p className="sub">Every badge, extension tag and record page uses the same rule, so what you see is what the chain supports.</p>
+          </div>
+
+          <div className="states">
+            {LEVEL_COPY.map((item) => (
+              <div className="state" key={item.level}>
+                <StatusBadge level={item.level} label={LEVELS[item.level].label} />
+                <h3>{item.title}</h3>
+                <p>{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <section id="how" className="wrap section">
           <div className="section-head">
-            <h2 className="title">Detect, sign, settle.</h2>
-            <p className="sub">
-              The extension reads Arc directly; the studio takes one EIP-712
-              signature; a relayer can pay the USDC gas.
-            </p>
+            <h2 className="title">Register, publish, check anywhere.</h2>
+            <p className="sub">One signature from the wallet that controls the contract, one small file in the repository.</p>
           </div>
 
           <div className="steps">
             <div className="step">
               <div className="idx">01</div>
-              <h3>Detect</h3>
-              <p>
-                The extension spots a contract address on the Arc explorer and
-                reads its Tally record: proven, self-attested, or unregistered.
-              </p>
+              <h3>Register</h3>
+              <p>Sign one EIP-712 message in the studio. The registry checks owner(), the admin role or the deployer address, and records the code hash.</p>
             </div>
             <div className="step">
               <div className="idx">02</div>
-              <h3>Sign</h3>
+              <h3>Publish</h3>
               <p>
-                In the studio you sign one EIP-712 payload pinned to chain 5042.
-                No gas leaves your wallet at signing time.
+                Commit a <span className="mono">tally.json</span> to the repository root listing the contract. It takes one minute and is what turns control proven into verified.
               </p>
             </div>
             <div className="step">
               <div className="idx">03</div>
-              <h3>Settle</h3>
-              <p>
-                The registration lands on Arc. The badge flips to owner-proven
-                the moment the chain confirms your control.
-              </p>
+              <h3>Check</h3>
+              <p>The browser extension tags addresses on the explorer, the README badge stays current, and this site shows the evidence behind every level.</p>
             </div>
           </div>
         </section>
 
-        {/* Badge for READMEs -------------------------------------------- */}
         <section className="wrap section">
           <div className="section-head">
             <h2 className="title">A live badge for your README.</h2>
-            <p className="sub">
-              The badge reads Arc on every request, so it can’t drift from the
-              on-chain truth.
-            </p>
+            <p className="sub">The badge reads the chain on every request, so it cannot drift from the truth.</p>
           </div>
 
           <div className="snippet">
-            <code>![Tally](https://tally-studio.vercel.app/api/badge/0xYourContract)</code>
-            <span className="tag">SVG · live</span>
+            <code>{badge}</code>
+            <span className="tag">SVG &middot; live</span>
           </div>
 
-          <div style={{ marginTop: 34 }}>
-            <div className="kicker" style={{ marginBottom: 14 }}>
-              Evaluator presets
+          <div className="mt-34">
+            <div className="kicker">Try it</div>
+            <div className="presets mt-24">
+              {presets.verified && (
+                <Link href={`/c/${presets.verified}?chain=${defaultChain.key}`} className="preset">
+                  Registered example
+                </Link>
+              )}
+              {presets.unverified && (
+                <Link href={`/c/${presets.unverified}?chain=${defaultChain.key}`} className="preset">
+                  Unregistered example
+                </Link>
+              )}
             </div>
-            <div className="presets">
-              <Link href="/c/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb" className="preset">
-                <span className="swatch" style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--proven)" }} />
-                Preset A · Verified
-              </Link>
-              <Link href="/c/0x000000000000000000000000000000000000dEaD" className="preset">
-                <span className="swatch" style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--unverified)" }} />
-                Preset B · Unverified
-              </Link>
-            </div>
-            <p className="muted small" style={{ marginTop: 12 }}>
-              Swap these for your deployed demo contracts before submission.
-            </p>
           </div>
+        </section>
+
+        <section className="wrap section">
+          <div className="section-head">
+            <h2 className="title">What Tally does not claim.</h2>
+            <p className="sub">A provenance tool that overstates itself is worse than none. These are the limits, stated up front.</p>
+          </div>
+          <ul className="limits">
+            {LIMITS.map((item) => (
+              <li key={item.title}>
+                <strong>{item.title}</strong>
+                {item.text}
+              </li>
+            ))}
+          </ul>
         </section>
       </main>
 
       <footer className="wrap footer">
-        <span>Provenance for Arc</span>
-        <span>Chain ID 5042 · USDC gas</span>
+        <span>Tally &middot; contract provenance</span>
+        <a href={SOURCE_URL} rel="noopener noreferrer">
+          Source &amp; security notes
+        </a>
       </footer>
     </>
   );

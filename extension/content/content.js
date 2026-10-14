@@ -1,113 +1,190 @@
-// Injects Tally provenance badges on Arc block explorer pages.
+// Injects Tally provenance badges next to contract addresses on a supported
+// block explorer. This script never touches the network: it asks the extension's
+// service worker, which answers with a level, one sentence and a studio URL.
+//
+// Everything is built with DOM APIs and textContent; no value from the chain or
+// the page is ever parsed as HTML or opened directly.
+/* global chrome, TALLY_CHAINS, TallySafeUrl, TallyStatus */
 (function () {
-  const cfg = globalThis.TALLY_CONFIG;
-  const ADDRESS_RE = /0x[a-fA-F0-9]{40}/;
-  const seen = new WeakSet();
-  const cache = new Map(); // address -> registration result
-  const badged = new Set(); // addresses already given a badge (one per page)
+  "use strict";
 
-  function studioRegisterUrl(address) {
-    return `${cfg.STUDIO_URL}/register?address=${address}`;
-  }
+  const config = globalThis.TALLY_CHAINS;
+  const safe = globalThis.TallySafeUrl;
+  const status = globalThis.TallyStatus;
+  const chain = safe.chainForHostname(config, location.hostname);
+  if (!chain) return;
 
-  function makeBadge(reg, address) {
-    const el = document.createElement("span");
-    el.className = "tally-badge";
+  const MAX_ADDRESSES = 40; // distinct addresses badged per page
+  const MAX_ANCHORS_PER_SCAN = 500;
+  const MAX_CONCURRENT = 4;
+  const RESULT_CACHE_LIMIT = 200;
+  const SCAN_DEBOUNCE_MS = 400;
+  const ADDRESS_PATH = /^\/(?:address|token)\/(0x[0-9a-fA-F]{40})(?:[/?#]|$)/;
 
-    if (reg && reg.isVerified) {
-      el.classList.add("tally-verified");
-      el.innerHTML = `<span class="tally-dot"></span> Tally Verified`;
-      el.title = `Owner-proven provenance\nRepo: ${reg.githubRepo}\nBuild: ${reg.buildHash}`;
-      if (reg.githubRepo) {
-        el.style.cursor = "pointer";
-        el.addEventListener("click", () => window.open(reg.githubRepo, "_blank"));
-      }
-    } else if (reg && reg.provenance === "SELF_ATTESTED") {
-      el.classList.add("tally-selfattested");
-      el.innerHTML = `<span class="tally-dot"></span> Self-attested (unproven)`;
-      el.title = `Claimed source, but ownership NOT verified on-chain.\nRepo: ${reg.githubRepo}`;
-      if (reg.githubRepo) {
-        el.style.cursor = "pointer";
-        el.addEventListener("click", () => window.open(reg.githubRepo, "_blank"));
-      }
-    } else {
-      el.classList.add("tally-unverified");
-      el.innerHTML = `<span class="tally-dot"></span> Unverified &middot; Register`;
-      el.title = "No Tally provenance record. Click to register.";
-      el.style.cursor = "pointer";
-      el.addEventListener("click", () =>
-        window.open(studioRegisterUrl(address), "_blank")
-      );
-    }
-    return el;
-  }
+  const results = new Map(); // address -> Promise<response|null>
+  const placed = new Map(); // address -> badge element currently in the page
+  const pending = new Set(); // addresses with a lookup in flight
 
-  async function resolve(address) {
-    const key = address.toLowerCase();
-    if (cache.has(key)) return cache.get(key);
-    const p = globalThis.TallyRegistry.getRegistration(address).catch((e) => {
-      console.debug("[Tally] lookup failed", e.message);
-      return null;
-    });
-    cache.set(key, p);
-    return p;
-  }
-
-  async function decorate(node, address) {
-    if (seen.has(node)) return;
-    seen.add(node);
-    const key = address.toLowerCase();
-    if (badged.has(key)) return; // at most one badge per address, page-wide
-    badged.add(key);
-    const reg = await resolve(address);
-    const badge = makeBadge(reg, address);
-    node.insertAdjacentElement("afterend", badge);
-  }
-
-  // 1) Primary address from the URL (…/address/0x…)
-  function decoratePrimary() {
-    const m = location.pathname.match(ADDRESS_RE);
-    if (!m) return;
-    const address = m[0];
-    if (badged.has(address.toLowerCase())) return; // already placed inline
-    const header =
-      document.querySelector("h1, h2, [data-testid='address-hash']") ||
-      document.body;
-    if (header && !header.querySelector(".tally-badge")) {
-      const anchor = document.createElement("span");
-      header.prepend(anchor);
-      decorate(anchor, address);
+  // ---- bounded concurrency ------------------------------------------------
+  const queue = [];
+  let active = 0;
+  function pump() {
+    while (active < MAX_CONCURRENT && queue.length) {
+      const job = queue.shift();
+      active++;
+      job.task().then(job.resolve, () => job.resolve(null)).finally(() => {
+        active--;
+        pump();
+      });
     }
   }
-
-  // 2) Inline addresses rendered as links on the page.
-  function decorateInline() {
-    const links = document.querySelectorAll(
-      "a[href*='/address/0x'], a[href*='/token/0x']"
-    );
-    links.forEach((a) => {
-      const m = a.getAttribute("href").match(ADDRESS_RE);
-      if (m) decorate(a, m[0]);
+  function enqueue(task) {
+    return new Promise((resolve) => {
+      queue.push({ task, resolve });
+      pump();
     });
   }
 
-  function run() {
+  // ---- lookup -------------------------------------------------------------
+  function ask(address) {
+    return new Promise((resolve) => {
+      try {
+        chrome.runtime.sendMessage({ type: "tally:lookup", address }, (response) => {
+          if (chrome.runtime.lastError || !response || typeof response !== "object") resolve(null);
+          else resolve(response);
+        });
+      } catch {
+        resolve(null); // extension reloaded or updated while the page stayed open
+      }
+    });
+  }
+
+  function lookup(address) {
+    const key = address.toLowerCase();
+    if (!results.has(key)) {
+      if (results.size >= RESULT_CACHE_LIMIT) results.delete(results.keys().next().value);
+      results.set(key, enqueue(() => ask(address)));
+    }
+    return results.get(key);
+  }
+
+  // ---- rendering ----------------------------------------------------------
+  function renderBadge(response) {
+    const level = response && status.LEVELS[response.level] ? response.level : "unknown";
+    const meta = status.LEVELS[level];
+    const label = level === "unverified" ? "Unverified \u00b7 Register" : meta.label;
+    const summary = typeof (response && response.summary) === "string" ? response.summary.slice(0, 300) : "";
+
+    const badge = document.createElement("a");
+    badge.className = "tally-badge tally-" + level;
+    badge.target = "_blank";
+    badge.rel = "noopener noreferrer";
+    // Only ever link to our own studio.
+    const href = response && typeof response.href === "string" ? response.href : "";
+    if (href.startsWith(config.studioUrl + "/")) badge.href = href;
+    badge.title = summary;
+    badge.setAttribute("aria-label", "Tally: " + label + (summary ? ". " + summary : ""));
+
+    const dot = document.createElement("span");
+    dot.className = "tally-dot";
+    const text = document.createElement("span");
+    text.className = "tally-label";
+    text.textContent = label;
+    badge.append(dot, text);
+    return badge;
+  }
+
+  async function decorate(anchor, address) {
+    const key = address.toLowerCase();
+    const existing = placed.get(key);
+    if (pending.has(key) || (existing && existing.isConnected)) return; // one badge per address
+    if (!placed.has(key) && placed.size + pending.size >= MAX_ADDRESSES) return;
+
+    pending.add(key);
     try {
-      // Inline first so the badge lands on the address in the header (nicely
-      // placed); decoratePrimary is only a fallback when the address isn't a
-      // link. Dedup keeps it to one badge per unique address on the page.
+      const response = await lookup(address);
+      if (!response) return; // no answer: show nothing rather than a guess
+      if (!anchor.isConnected) {
+        results.delete(key); // the page moved on; let a later scan retry
+        return;
+      }
+      const badge = renderBadge(response);
+      anchor.insertAdjacentElement("afterend", badge);
+      placed.set(key, badge);
+    } finally {
+      pending.delete(key);
+    }
+  }
+
+  // ---- finding addresses --------------------------------------------------
+  function addressFromLink(anchor) {
+    let url;
+    try {
+      url = new URL(anchor.getAttribute("href"), location.href);
+    } catch {
+      return null;
+    }
+    if (url.origin !== location.origin) return null; // only the explorer's own links
+    const match = ADDRESS_PATH.exec(url.pathname);
+    return match ? match[1] : null;
+  }
+
+  function decorateInline() {
+    const links = document.querySelectorAll("a[href*='/address/0x'], a[href*='/token/0x']");
+    const limit = Math.min(links.length, MAX_ANCHORS_PER_SCAN);
+    for (let i = 0; i < limit; i++) {
+      const address = addressFromLink(links[i]);
+      if (address) decorate(links[i], address);
+    }
+  }
+
+  // The page's own address is a fallback when the header does not render it as a link.
+  function decoratePrimary() {
+    const match = ADDRESS_PATH.exec(location.pathname);
+    if (!match) return;
+    const key = match[1].toLowerCase();
+    const existing = placed.get(key);
+    if (pending.has(key) || (existing && existing.isConnected)) return;
+    const header = document.querySelector("h1, h2, [data-testid='address-hash']") || document.body;
+    if (header.querySelector("[data-tally-anchor='" + key + "']")) return; // already tried here
+    const anchor = document.createElement("span");
+    anchor.setAttribute("data-tally-anchor", key);
+    header.prepend(anchor);
+    decorate(anchor, match[1]);
+  }
+
+  // Explorers navigate without reloading. When the path changes, drop every badge
+  // so none can end up beside a different address than the one it was computed for.
+  let lastPath = location.pathname;
+  function resetIfNavigated() {
+    if (location.pathname === lastPath) return;
+    lastPath = location.pathname;
+    document.querySelectorAll(".tally-badge, [data-tally-anchor]").forEach((node) => node.remove());
+    placed.clear();
+  }
+
+  function pruneRemoved() {
+    for (const [key, badge] of placed) if (!badge.isConnected) placed.delete(key);
+  }
+
+  function scan() {
+    try {
+      resetIfNavigated();
+      pruneRemoved(); // rows the explorer re-rendered must not use up the cap
+      // Inline links first so the badge lands beside the address in the header;
+      // decoratePrimary only runs when that address is not a link.
       decorateInline();
       decoratePrimary();
-    } catch (e) {
-      console.debug("[Tally] run error", e);
+    } catch (error) {
+      console.debug("[Tally] scan error", error);
     }
   }
 
-  run();
-  // Explorers are SPAs — re-scan on DOM churn (debounced).
-  let t;
+  scan();
+  // Explorers are single-page apps: re-scan on DOM churn (debounced).
+  let timer;
   new MutationObserver(() => {
-    clearTimeout(t);
-    t = setTimeout(run, 400);
+    clearTimeout(timer);
+    timer = setTimeout(scan, SCAN_DEBOUNCE_MS);
   }).observe(document.body, { childList: true, subtree: true });
 })();

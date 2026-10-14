@@ -1,0 +1,87 @@
+// Shared test plumbing: load the browser libraries under Node, encode registry
+// responses with viem (an independent implementation of the ABI), and fake the
+// network.
+const fs = require("node:fs");
+const path = require("node:path");
+const { parseAbi, encodeFunctionResult } = require("viem");
+
+const root = path.join(__dirname, "..");
+const lib = (name) => require(path.join(root, "lib", name));
+
+const chains = require(path.join(root, "chains.generated.js"));
+const arc = chains.chains.find((c) => c.key === "arc");
+
+const vectors = (name) => JSON.parse(fs.readFileSync(path.join(root, "..", "test-vectors", name), "utf8"));
+
+const abiV1 = parseAbi([
+  "function getRegistration(address _target) view returns (string githubRepo, string buildHash, address owner, uint256 registeredAt, uint8 provenance, bool isVerified)",
+]);
+const abiV2 = parseAbi([
+  "function getRegistration(address target) view returns (string githubRepo, string buildHash, address signer, uint256 registeredAt, uint8 provenance, bool isControlProven, uint8 method, uint8 flags)",
+]);
+
+const ZERO = "0x0000000000000000000000000000000000000000";
+const SIGNER = "0x1111111111111111111111111111111111111111";
+const TARGET = "0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb";
+const REPO = "https://github.com/acme/vault";
+
+/** ABI-encode a v1 getRegistration result. prov: 0|1|2. */
+function encodeV1({ repo = REPO, hash = "", owner = SIGNER, at = 1700000000n, prov = 2, verified = prov === 2 } = {}) {
+  return encodeFunctionResult({ abi: abiV1, functionName: "getRegistration", result: [repo, hash, owner, BigInt(at), prov, verified] });
+}
+
+/** ABI-encode a v2 getRegistration result. flags: bit0 control, bit1 code. */
+function encodeV2({ repo = REPO, hash = "", signer = SIGNER, at = 1700000000n, prov = 2, method = 1, flags = 3 } = {}) {
+  return encodeFunctionResult({ abi: abiV2, functionName: "getRegistration", result: [repo, hash, signer, BigInt(at), prov, prov === 2 && flags === 3, method, flags] });
+}
+
+const word = (hexNoPrefix) => hexNoPrefix.padStart(64, "0");
+const encodeAddressWord = (address) => "0x" + word(address.slice(2).toLowerCase());
+
+/** A Response-like object from text (uses the real Response class from Node). */
+const textResponse = (body, init = {}) => new Response(body, { status: 200, ...init });
+
+/**
+ * Fake fetch. `handlers` is a function (url, init) => Response | Promise<Response> | throw.
+ * Records every call in `.calls`.
+ */
+function fakeFetch(handler) {
+  const calls = [];
+  const fn = async (url, init) => {
+    calls.push({ url: String(url), init });
+    return handler(String(url), init, calls.length);
+  };
+  fn.calls = calls;
+  return fn;
+}
+
+/**
+ * A fake chain: routes JSON-RPC eth_call by (to, selector) and serves GitHub raw files.
+ * rpc: { [toLower]: { [selector]: resultHex | Error | {error:{code,message}} } }
+ * files: { [url]: string | number (status) | Error }
+ */
+function fakeWorld({ rpc = {}, files = {} } = {}) {
+  return fakeFetch(async (url, init) => {
+    if (url.startsWith("https://raw.githubusercontent.com/")) {
+      const file = files[url];
+      if (file instanceof Error) throw file;
+      if (typeof file === "number") return new Response("", { status: file });
+      if (file === undefined) return new Response("Not Found", { status: 404 });
+      return textResponse(file);
+    }
+    const body = JSON.parse(init.body);
+    const { to, data } = body.params[0];
+    const reply = (rpc[to.toLowerCase()] || {})[data.slice(0, 10)];
+    if (reply instanceof Error) throw reply;
+    if (reply === undefined) return Response.json({ jsonrpc: "2.0", id: 1, error: { code: 3, message: "execution reverted" } });
+    if (reply && reply.error) return Response.json({ jsonrpc: "2.0", id: 1, error: reply.error });
+    return Response.json({ jsonrpc: "2.0", id: 1, result: reply });
+  });
+}
+
+const tallyJson = (...contracts) => JSON.stringify({ version: 1, contracts });
+
+module.exports = {
+  root, lib, chains, arc, vectors, ZERO, SIGNER, TARGET, REPO,
+  encodeV1, encodeV2, encodeAddressWord, textResponse, fakeFetch, fakeWorld, tallyJson,
+};

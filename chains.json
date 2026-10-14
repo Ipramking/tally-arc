@@ -1,0 +1,34 @@
+{
+  "$comment": "Single source of truth for every chain Tally supports. Edit this file, then run `npm run chains:sync` (writes studio/lib/chains.generated.ts, extension/chains.generated.js and the extension manifest host lists). Hardhat reads it directly. `registries` is ordered newest first: the first entry receives writes, all entries are read (newest wins). See docs/adding-a-chain.md.",
+  "studioUrl": "https://tally-studio.vercel.app",
+  "defaultChain": "arc",
+  "chains": [
+    {
+      "key": "arc",
+      "id": 5042,
+      "name": "Arc",
+      "testnet": false,
+      "nativeCurrency": { "name": "USD Coin", "symbol": "USDC", "decimals": 18 },
+      "rpcUrl": "https://rpc.mainnet.arc.io",
+      "explorer": { "name": "Arc Explorer", "url": "https://explorer.arc.io" },
+      "registries": [
+        { "version": 1, "address": "0x459Cab32306c439a408cA6b8672CcF6c6A0536d9" }
+      ],
+      "presets": {
+        "verified": "0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb",
+        "unverified": "0x000000000000000000000000000000000000dEaD"
+      }
+    },
+    {
+      "key": "arc-testnet",
+      "id": 5042002,
+      "name": "Arc Testnet",
+      "testnet": true,
+      "nativeCurrency": { "name": "USD Coin", "symbol": "USDC", "decimals": 18 },
+      "rpcUrl": "https://rpc.testnet.arc.io",
+      "explorer": { "name": "Arc Testnet Explorer", "url": "https://explorer.testnet.arc.io" },
+      "registries": [],
+      "presets": {}
+    }
+  ]
+}

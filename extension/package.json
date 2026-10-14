@@ -1,0 +1,18 @@
+{
+  "name": "tally-extension",
+  "version": "0.2.0",
+  "private": true,
+  "license": "MIT",
+  "description": "Tally browser extension (MV3). No runtime dependencies; dev dependencies are for tests only.",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "icons": "python3 make-icons.py"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0",
+    "viem": "^2.57.4"
+  }
+}
