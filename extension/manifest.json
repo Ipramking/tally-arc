@@ -22,7 +22,11 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://explorer.arc.io/*", "https://explorer.testnet.arc.io/*"],
+      "matches": [
+        "https://explorer.arc.io/*",
+        "https://explorer.testnet.arc.io/*",
+        "https://scan.bohr.life/*"
+      ],
       "js": [
         "chains.generated.js",
         "lib/safe-url.js",
@@ -36,6 +40,7 @@
   "host_permissions": [
     "https://rpc.mainnet.arc.io/*",
     "https://rpc.testnet.arc.io/*",
+    "https://rpc.bohr.life/*",
     "https://raw.githubusercontent.com/*"
   ],
   "content_security_policy": {

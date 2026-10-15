@@ -32,7 +32,7 @@ const world = (extra = {}) =>
 
 test("lists the configured chains and shows presets only where they exist", () => {
   const { $, document } = open(world());
-  assert.deepEqual([...$("chain").options].map((o) => o.value), ["arc", "arc-testnet"]);
+  assert.deepEqual([...$("chain").options].map((o) => o.value), chains.chains.map((c) => c.key));
   assert.equal($("chain").value, "arc");
   assert.equal($("presets").classList.contains("hidden"), false);
   $("chain").value = "arc-testnet";

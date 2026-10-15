@@ -47,6 +47,32 @@
         },
         "registries": [],
         "presets": {}
+      },
+      {
+        "key": "bot-testnet",
+        "id": 968,
+        "name": "BOT Chain Testnet (Bohr)",
+        "testnet": true,
+        "nativeCurrency": {
+          "name": "BOT",
+          "symbol": "BOT",
+          "decimals": 18
+        },
+        "rpcUrl": "https://rpc.bohr.life",
+        "explorer": {
+          "name": "Bohr Explorer",
+          "url": "https://scan.bohr.life"
+        },
+        "registries": [
+          {
+            "version": 2,
+            "address": "0x0438E4421D6E9D374939109dcaEb8e7e1B8Fb312"
+          }
+        ],
+        "presets": {
+          "verified": "0xEC84A560DF15cCb86d96c86Bb61d8CEB1c744452",
+          "unverified": "0x000000000000000000000000000000000000dEaD"
+        }
       }
     ]
   };
