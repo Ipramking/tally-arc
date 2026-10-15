@@ -138,11 +138,11 @@
     };
   }
 
-  async function ethCall(rpcUrl, to, data, fetchImpl, timeoutMs) {
+  async function rpc(rpcUrl, method, params, fetchImpl, timeoutMs) {
     const response = await fetchImpl(rpcUrl, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to, data }, "latest"] }),
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
       credentials: "omit",
       redirect: "error",
       cache: "no-store",
@@ -162,6 +162,20 @@
     }
     if (!body || typeof body.result !== "string") throw new RpcError("RPC returned no result", false);
     return body.result;
+  }
+
+  function ethCall(rpcUrl, to, data, fetchImpl, timeoutMs) {
+    return rpc(rpcUrl, "eth_call", [{ to, data }, "latest"], fetchImpl, timeoutMs);
+  }
+
+  /**
+   * Does `address` hold contract code? An empty answer ("0x") is a wallet (an
+   * externally owned account). Only the length matters, never the bytes.
+   */
+  async function hasCode(rpcUrl, address, fetchImpl, timeoutMs) {
+    const code = await rpc(rpcUrl, "eth_getCode", [address, "latest"], fetchImpl, timeoutMs);
+    if (!/^0x(?:[0-9a-fA-F]{2})*$/.test(code)) throw new RpcError("RPC returned malformed code", false);
+    return code.length > 2;
   }
 
   /** Read one registry. Resolves to a record (possibly provenance NONE). */
@@ -195,6 +209,7 @@
     encodeGetRegistration,
     decodeRegistration,
     ethCall,
+    hasCode,
     readRegistry,
     v1ControlCurrent,
   };

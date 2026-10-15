@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Nav } from "./components/Nav";
 import { StatusBadge } from "./components/StatusBadge";
 import { TallyMark } from "./components/TallyMark";
-import { chainLabel, defaultChain, STUDIO_URL } from "@/lib/chain";
+import { defaultChain, resolveChain, STUDIO_URL } from "@/lib/chain";
 import { LEVELS, type Level } from "@/lib/status";
 
 const SOURCE_URL = "https://github.com/Ipramking/tally-arc";
@@ -84,14 +84,19 @@ function Seal() {
   );
 }
 
-export default function Home() {
-  const presets = defaultChain.presets;
+type HomeProps = { searchParams: Promise<{ chain?: string | string[] }> };
+
+export default async function Home({ searchParams }: HomeProps) {
+  const { chain: chainParam } = await searchParams;
+  // The home page is lenient: an unknown ?chain= falls back to the default network.
+  const chain = resolveChain(chainParam) ?? defaultChain;
+  const presets = chain.presets;
   const example = presets.verified ?? "0x0000000000000000000000000000000000000000";
-  const badge = `![Tally](${STUDIO_URL}/api/badge/0xYourContract?chain=${defaultChain.key})`;
+  const badge = `![Tally](${STUDIO_URL}/api/badge/0xYourContract?chain=${chain.key})`;
 
   return (
     <>
-      <Nav chip={chainLabel(defaultChain)}>
+      <Nav chain={chain.key}>
         <a href="#proof" className="hide-sm">
           Proof model
         </a>
@@ -120,11 +125,11 @@ export default function Home() {
             </p>
 
             <div className="cta-row reveal d3">
-              <Link href="/register" className="btn">
+              <Link href={`/register?chain=${chain.key}`} className="btn">
                 Register a contract
                 <span aria-hidden="true">&rarr;</span>
               </Link>
-              <Link href={`/c/${example}?chain=${defaultChain.key}`} className="btn-ghost">
+              <Link href={`/c/${example}?chain=${chain.key}`} className="btn-ghost">
                 <span className="u">See an example record</span>
                 <span className="arw" aria-hidden="true">
                   &#8599;
@@ -227,12 +232,12 @@ export default function Home() {
             <div className="kicker">Try it</div>
             <div className="presets mt-24">
               {presets.verified && (
-                <Link href={`/c/${presets.verified}?chain=${defaultChain.key}`} className="preset">
+                <Link href={`/c/${presets.verified}?chain=${chain.key}`} className="preset">
                   Registered example
                 </Link>
               )}
               {presets.unverified && (
-                <Link href={`/c/${presets.unverified}?chain=${defaultChain.key}`} className="preset">
+                <Link href={`/c/${presets.unverified}?chain=${chain.key}`} className="preset">
                   Unregistered example
                 </Link>
               )}

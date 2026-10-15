@@ -24,6 +24,7 @@
   const results = new Map(); // address -> Promise<response|null>
   const placed = new Map(); // address -> badge element currently in the page
   const pending = new Set(); // addresses with a lookup in flight
+  const wallets = new Set(); // addresses that hold no code: nothing to verify, so no badge
 
   // ---- bounded concurrency ------------------------------------------------
   const queue = [];
@@ -72,7 +73,8 @@
   function renderBadge(response) {
     const level = response && status.LEVELS[response.level] ? response.level : "unknown";
     const meta = status.LEVELS[level];
-    const label = level === "unverified" ? "Unverified \u00b7 Register" : meta.label;
+    // Plain status only. No call to action: this badge is read by people checking a contract.
+    const label = meta.label;
     const summary = typeof (response && response.summary) === "string" ? response.summary.slice(0, 300) : "";
 
     const badge = document.createElement("a");
@@ -96,6 +98,7 @@
 
   async function decorate(anchor, address) {
     const key = address.toLowerCase();
+    if (wallets.has(key)) return;
     const existing = placed.get(key);
     if (pending.has(key) || (existing && existing.isConnected)) return; // one badge per address
     if (!placed.has(key) && placed.size + pending.size >= MAX_ADDRESSES) return;
@@ -104,6 +107,12 @@
     try {
       const response = await lookup(address);
       if (!response) return; // no answer: show nothing rather than a guess
+      if (response.level === "wallet") {
+        // A wallet (creator, sender, recipient...) is not a contract. A red "Register" badge
+        // beside it would be wrong: nothing can be registered there.
+        wallets.add(key);
+        return;
+      }
       if (!anchor.isConnected) {
         results.delete(key); // the page moved on; let a later scan retry
         return;

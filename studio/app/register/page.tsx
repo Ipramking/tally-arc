@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Nav } from "../components/Nav";
 import { RegisterForm } from "./RegisterForm";
-import { chainLabel, resolveChain } from "@/lib/chain";
+import { resolveChain } from "@/lib/chain";
 import { isAddress } from "@/lib/safe-url";
 
 export const metadata: Metadata = { title: "Register a contract" };
@@ -16,7 +16,7 @@ export default async function RegisterPage({ searchParams }: Props) {
 
   return (
     <>
-      <Nav chip={chain ? chainLabel(chain) : undefined}>
+      <Nav chain={chain?.key}>
         <Link href="/" className="hide-sm">
           Home
         </Link>
@@ -35,8 +35,21 @@ export default async function RegisterPage({ searchParams }: Props) {
           </p>
         </div>
 
+        {chain && (
+          <p className="banner" role="note">
+            <b>Registering is for the wallet that controls a contract.</b> The registry checks owner(), the admin role or the deployer address, and refuses everyone else. If you only want to know whether a
+            contract is verified, you do not need this page.
+            {address && (
+              <>
+                {" "}
+                <Link href={`/c/${address}?chain=${chain.key}`}>Open this contract&apos;s record instead</Link>.
+              </>
+            )}
+          </p>
+        )}
+
         {chain ? (
-          <RegisterForm chain={chain} initialAddress={address} />
+          <RegisterForm key={chain.key} chain={chain} initialAddress={address} />
         ) : (
           <div className="panel">
             <p className="hint">This studio does not know that network. Check the link you followed, or start from the home page.</p>

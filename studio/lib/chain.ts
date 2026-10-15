@@ -45,6 +45,13 @@ export function serverChain(chain: ChainDef, env: Record<string, string | undefi
   return chain;
 }
 
+/** The same page on another network: sets `?chain=` and keeps every other query parameter. */
+export function chainHref(pathname: string, search: string, key: string): string {
+  const params = new URLSearchParams(search);
+  params.set("chain", key);
+  return `${pathname}?${params.toString()}`;
+}
+
 /** How a chain is named in the UI, for example "Arc Mainnet \u00b7 5042". */
 export function chainLabel(chain: ChainDef): string {
   return `${chain.name} \u00b7 ${chain.id}`;

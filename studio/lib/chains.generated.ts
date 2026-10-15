@@ -86,7 +86,7 @@ export const CHAINS = [
     "registries": [
       {
         "version": 2,
-        "address": "0x0438E4421D6E9D374939109dcaEb8e7e1B8Fb312"
+        "address": "0x5F514879a3B1fD39e47299706031F6D85c8c9C90"
       }
     ],
     "presets": {

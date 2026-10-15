@@ -54,11 +54,10 @@ if (typeof importScripts === "function") {
       const summary = result.ok
         ? root.TallyStatus.describe(level, result.registration, result.repo)
         : root.TallyStatus.describe("unknown");
-      const config = root.TALLY_CHAINS;
-      const href =
-        level === "unverified"
-          ? root.TallySafeUrl.studioRegisterUrl(config, chain, address)
-          : root.TallySafeUrl.studioDetailUrl(config, chain, address);
+      // Every badge opens the contract's record, never the register form: a visitor who is only
+      // checking a contract must not be nudged into registering it. The record explains what
+      // the status means and offers registration, clearly, to the contract's owner.
+      const href = root.TallySafeUrl.studioDetailUrl(root.TALLY_CHAINS, chain, address);
       return { ok: result.ok, level, summary, href };
     } finally {
       release();

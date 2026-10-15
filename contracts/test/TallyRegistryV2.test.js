@@ -489,4 +489,109 @@ describe("TallyRegistryV2", () => {
       expect(unknown).to.deep.include({ provenance: 0, isControlProven: false, flags: 0, githubRepo: "" });
     });
   });
+
+  describe("history", () => {
+    const KIND = { REGISTERED: 0, REVOKED: 1 };
+    const entry = (e) => ({
+      signer: e.signer,
+      blockNumber: Number(e.blockNumber),
+      kind: Number(e.kind),
+      provenance: Number(e.provenance),
+      method: Number(e.method),
+    });
+
+    it("is empty for a target that was never registered", async () => {
+      const target = ethers.Wallet.createRandom().address;
+      expect(await registry.historyLength(target)).to.equal(0n);
+      expect(await registry.getHistory(target, 0, 10)).to.have.length(0);
+    });
+
+    it("appends one entry per registration, oldest first, and keeps the claim that was replaced", async () => {
+      const target = await addr(await deployTarget("Plain"));
+      const first = await (await register(registry, relayer, dev, { target, buildHash: "v1" })).wait();
+      const second = await (await register(registry, relayer, dev, { target, buildHash: "v2" })).wait();
+
+      expect((await read(registry, target)).buildHash).to.equal("v2"); // the record shows only the latest...
+      expect(await registry.historyLength(target)).to.equal(2n); // ...the history keeps both
+      const list = (await registry.getHistory(target, 0, 10)).map(entry);
+      expect(list).to.deep.equal([
+        { signer: dev.address, blockNumber: first.blockNumber, kind: KIND.REGISTERED, provenance: PROV.SELF, method: METHOD.NONE },
+        { signer: dev.address, blockNumber: second.blockNumber, kind: KIND.REGISTERED, provenance: PROV.SELF, method: METHOD.NONE },
+      ]);
+    });
+
+    it("keeps a squatter's claim in the history after the real deployer takes over", async () => {
+      const nonce = await ethers.provider.getTransactionCount(dev.address);
+      const target = await addr(await deployTarget("Plain", [], dev));
+      await register(registry, relayer, other, { target, githubRepo: "https://github.com/squatter/fake" });
+      await register(registry, relayer, dev, { target, method: METHOD.DEPLOYER, deployerNonce: BigInt(nonce) });
+
+      expect((await read(registry, target)).signer).to.equal(dev.address);
+      const list = (await registry.getHistory(target, 0, 10)).map(entry);
+      expect(list.map((e) => [e.signer, e.provenance, e.method])).to.deep.equal([
+        [other.address, PROV.SELF, METHOD.NONE],
+        [dev.address, PROV.CONTROL, METHOD.DEPLOYER],
+      ]);
+    });
+
+    it("records a revocation with who removed the record, while the record itself is gone", async () => {
+      const t = await deployTarget("TransferableOwner", [dev.address]);
+      const target = await addr(t);
+      await register(registry, relayer, dev, { target, method: METHOD.OWNER });
+      await t.transferOwnership(other.address);
+      const receipt = await (await registry.connect(other).revoke(target)).wait();
+
+      expect((await read(registry, target)).provenance).to.equal(PROV.NONE);
+      const list = (await registry.getHistory(target, 0, 10)).map(entry);
+      expect(list).to.have.length(2);
+      expect(list[1]).to.deep.equal({
+        signer: other.address,
+        blockNumber: receipt.blockNumber,
+        kind: KIND.REVOKED,
+        provenance: PROV.CONTROL,
+        method: METHOD.OWNER,
+      });
+    });
+
+    it("keeps appending after a revoke, so a re-registration shows all three lines", async () => {
+      const target = await addr(await deployTarget("Plain"));
+      await register(registry, relayer, dev, { target });
+      await registry.connect(dev).revoke(target);
+      await register(registry, relayer, dev, { target });
+      const list = (await registry.getHistory(target, 0, 10)).map(entry);
+      expect(list.map((e) => e.kind)).to.deep.equal([KIND.REGISTERED, KIND.REVOKED, KIND.REGISTERED]);
+    });
+
+    it("adds nothing when a registration reverts, and keeps each target's history separate", async () => {
+      const owned = await addr(await deployTarget("OwnableTarget", [other.address]));
+      const plain = await addr(await deployTarget("Plain"));
+      await expect(register(registry, relayer, dev, { target: owned, method: METHOD.OWNER })).to.be.revertedWithCustomError(registry, "NotOwner");
+      await register(registry, relayer, dev, { target: plain });
+      expect(await registry.historyLength(owned)).to.equal(0n);
+      expect(await registry.historyLength(plain)).to.equal(1n);
+    });
+
+    it("pages with start and count, and never overflows on a huge count", async () => {
+      const target = await addr(await deployTarget("Plain"));
+      for (let i = 0; i < 3; i++) await register(registry, relayer, dev, { target, buildHash: `b${i}` });
+
+      const all = await registry.getHistory(target, 0, 3);
+      expect(all).to.have.length(3);
+      expect((await registry.getHistory(target, 1, 2)).map(entry)).to.deep.equal(all.slice(1).map(entry));
+      expect(await registry.getHistory(target, 1, 1)).to.have.length(1);
+      expect(await registry.getHistory(target, 2, ethers.MaxUint256)).to.have.length(1); // no overflow in start + count
+      expect(await registry.getHistory(target, 3, 5)).to.have.length(0); // start at the end
+      expect(await registry.getHistory(target, 99, 5)).to.have.length(0); // start past the end
+      expect(await registry.getHistory(target, 0, 0)).to.have.length(0);
+    });
+
+    it("returns at most 100 entries per call", async function () {
+      this.timeout(180_000);
+      const target = await addr(await deployTarget("Plain"));
+      for (let i = 0; i < 102; i++) await register(registry, relayer, dev, { target, buildHash: `b${i}` });
+      expect(await registry.historyLength(target)).to.equal(102n);
+      expect(await registry.getHistory(target, 0, 1000)).to.have.length(100);
+      expect(await registry.getHistory(target, 100, 1000)).to.have.length(2);
+    });
+  });
 });

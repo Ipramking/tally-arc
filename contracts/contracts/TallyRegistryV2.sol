@@ -38,6 +38,10 @@ import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/Signa
 ///         and (rank is not 1, or it comes from the same signer). A control
 ///         record whose signer no longer controls the target counts as rank 1.
 ///
+///         The registry keeps one current record per target, but never forgets:
+///         every registration and revocation is also appended to the target's
+///         history (see {getHistory}), so a replaced record can still be read.
+///
 ///         Signatures are EIP-712 typed data checked with ERC-1271 support, so
 ///         multisig / smart-account owners (for example a Safe) can register,
 ///         and any relayer can submit.
@@ -80,6 +84,24 @@ contract TallyRegistryV2 is EIP712 {
         bytes32 codehash;
     }
 
+    /// @dev What happened to a record.
+    enum HistoryKind {
+        REGISTERED,
+        REVOKED
+    }
+
+    /// @dev One line of a target's append-only history. It packs into a single
+    ///      storage slot (20 + 8 + 1 + 1 + 1 bytes). The repository and build hash
+    ///      are in the `Registered` event emitted in `blockNumber`, which a client
+    ///      can fetch with a single-block log query that every RPC allows.
+    struct HistoryEntry {
+        address signer; // REGISTERED: who signed the claim. REVOKED: who removed the record.
+        uint64 blockNumber;
+        HistoryKind kind;
+        Provenance provenance; // the level written, or the level that was removed
+        ProofMethod method;
+    }
+
     // ------------------------------------------------------------- constants
 
     uint256 public constant REGISTRY_VERSION = 2;
@@ -96,6 +118,8 @@ contract TallyRegistryV2 is EIP712 {
     /// @dev Gas given to `owner()` / `hasRole()` probes of untrusted targets.
     ///      Bounds what a hostile target can burn.
     uint256 private constant PROBE_GAS = 30_000;
+    /// @dev Most entries `getHistory` returns in one call.
+    uint256 private constant MAX_HISTORY_PAGE = 100;
     uint256 private constant MAX_REPO_LENGTH = 200;
     uint256 private constant MAX_BUILD_HASH_LENGTH = 66;
     bytes19 private constant REPO_PREFIX = "https://github.com/";
@@ -108,6 +132,8 @@ contract TallyRegistryV2 is EIP712 {
     // --------------------------------------------------------------- storage
 
     mapping(address target => Record) private _records;
+    /// @dev Append-only. A record that is replaced or revoked stays here.
+    mapping(address target => HistoryEntry[]) private _history;
     /// @notice Per-signer signing nonce, consumed by each registration.
     mapping(address signer => uint256) public nonces;
 
@@ -174,6 +200,7 @@ contract TallyRegistryV2 is EIP712 {
             msg.sender != _ownerOf(target) &&
             !_isAdmin(target, msg.sender)
         ) revert NotAuthorized();
+        _pushHistory(target, msg.sender, HistoryKind.REVOKED, rec.provenance, rec.method);
         delete _records[target];
         emit Revoked(target, msg.sender);
     }
@@ -223,6 +250,27 @@ contract TallyRegistryV2 is EIP712 {
         if (controlNow) flags |= FLAG_CONTROL_CURRENT;
         if (codeNow) flags |= FLAG_CODE_CURRENT;
         isControlProven = provenance == Provenance.CONTROL_PROVEN && controlNow && codeNow;
+    }
+
+    /// @notice How many history entries `target` has (registrations and revocations).
+    function historyLength(address target) external view returns (uint256) {
+        return _history[target].length;
+    }
+
+    /// @notice A page of `target`'s history, oldest first. Nothing is ever removed:
+    ///         a record that was replaced or revoked is still listed here, with the
+    ///         block of the write. The repository and build hash of each entry are in
+    ///         the `Registered` event of that block.
+    /// @param start First entry to return (0 is the oldest).
+    /// @param count Entries wanted; at most 100 are returned.
+    function getHistory(address target, uint256 start, uint256 count) external view returns (HistoryEntry[] memory page) {
+        HistoryEntry[] storage list = _history[target];
+        uint256 total = list.length;
+        if (start >= total || count == 0) return new HistoryEntry[](0);
+        if (count > MAX_HISTORY_PAGE) count = MAX_HISTORY_PAGE;
+        uint256 end = total - start < count ? total : start + count;
+        page = new HistoryEntry[](end - start);
+        for (uint256 i = start; i < end; ++i) page[i - start] = list[i];
     }
 
     /// @notice Code hash recorded at registration (zero if unregistered).
@@ -291,7 +339,14 @@ contract TallyRegistryV2 is EIP712 {
         rec.provenance = level;
         rec.method = c.method;
         rec.codehash = codehash;
+        _pushHistory(c.target, c.signer, HistoryKind.REGISTERED, level, c.method);
         _emitRegistered(c, level, codehash);
+    }
+
+    function _pushHistory(address target, address who, HistoryKind kind, Provenance level, ProofMethod method) private {
+        _history[target].push(
+            HistoryEntry({signer: who, blockNumber: uint64(block.number), kind: kind, provenance: level, method: method})
+        );
     }
 
     function _emitRegistered(Claim calldata c, Provenance level, bytes32 codehash) private {

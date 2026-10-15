@@ -10,7 +10,8 @@ import { readLimited, timeoutSignal, TooLargeError, type NetOptions } from "./ne
 import { isAddress, parseGithubRepo, tallyJsonUrl } from "./safe-url";
 
 export const MAX_FILE_BYTES = 64 * 1024;
-const MAX_ENTRIES = 1000;
+/** Clients read only this many entries of a tally.json; later ones are ignored. */
+export const MAX_ENTRIES = 1000;
 
 export type RepoStatus =
   | "confirmed" //     tally.json lists this chain id + address
@@ -32,7 +33,13 @@ export interface RepoProofInput extends NetOptions {
   address: string;
 }
 
-export async function checkRepoProof({ repoUrl, chainId, address, fetchImpl = fetch, timeoutMs }: RepoProofInput): Promise<RepoCheck> {
+/** The outcome of fetching a repository's tally.json: its entries, or why they are not available. */
+export type TallyFileRead =
+  | { status: "ok"; url: string; contracts: unknown[] }
+  | { status: Exclude<RepoStatus, "confirmed" | "not-listed">; url?: string; detail?: string };
+
+/** Fetch and validate a repository's tally.json (never follows redirects, capped in size, strict shape). */
+export async function readTallyFile({ repoUrl, fetchImpl = fetch, timeoutMs }: { repoUrl: string } & NetOptions): Promise<TallyFileRead> {
   const parsed = parseGithubRepo(repoUrl);
   if (!parsed) return { status: "invalid-repo" };
   const url = tallyJsonUrl(parsed);
@@ -72,20 +79,25 @@ export async function checkRepoProof({ repoUrl, chainId, address, fetchImpl = fe
   if (!file || typeof file !== "object" || file.version !== 1 || !Array.isArray(file.contracts)) {
     return { status: "invalid-file", url, detail: "unexpected shape" };
   }
+  return { status: "ok", url, contracts: file.contracts };
+}
 
-  const wanted = address.toLowerCase();
-  for (const entry of file.contracts.slice(0, MAX_ENTRIES) as unknown[]) {
-    const item = entry as { chainId?: unknown; address?: unknown } | null;
-    if (
-      item &&
-      typeof item === "object" &&
-      item.chainId === chainId &&
-      typeof item.address === "string" &&
-      isAddress(item.address) &&
-      item.address.toLowerCase() === wanted
-    ) {
-      return { status: "confirmed", url };
-    }
-  }
-  return { status: "not-listed", url };
+/** Does this tally.json entry list `address` on `chainId`? */
+export function entryMatches(entry: unknown, chainId: number, address: string): boolean {
+  const item = entry as { chainId?: unknown; address?: unknown } | null;
+  return (
+    !!item &&
+    typeof item === "object" &&
+    item.chainId === chainId &&
+    typeof item.address === "string" &&
+    isAddress(item.address) &&
+    item.address.toLowerCase() === address.toLowerCase()
+  );
+}
+
+export async function checkRepoProof({ repoUrl, chainId, address, fetchImpl, timeoutMs }: RepoProofInput): Promise<RepoCheck> {
+  const read = await readTallyFile({ repoUrl, fetchImpl, timeoutMs });
+  if (read.status !== "ok") return read;
+  const listed = read.contracts.slice(0, MAX_ENTRIES).some((entry) => entryMatches(entry, chainId, address));
+  return { status: listed ? "confirmed" : "not-listed", url: read.url };
 }

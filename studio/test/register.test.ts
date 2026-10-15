@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { explainPlan, tallyJsonSnippet, validateRegisterInput } from "@/lib/register";
+import { explainPlan, reviewRegistration, tallyJsonSnippet, validateRegisterInput } from "@/lib/register";
 import { OTHER, TARGET } from "./helpers";
 
 const ok = { target: TARGET, repo: "https://github.com/acme/vault", buildHash: "" };
@@ -77,6 +77,39 @@ describe("explainPlan", () => {
     expect(explainPlan({ method: "OWNER" }, v1)).toMatchObject({ tone: "ok", method: "OWNER" });
     expect(explainPlan({ method: "ADMIN_ROLE" }, v1)).toMatchObject({ tone: "warn", method: "NONE" });
     expect(explainPlan({ method: "DEPLOYER", deployerNonce: 3 }, v1)).toMatchObject({ tone: "warn", method: "NONE" });
+  });
+});
+
+describe("reviewRegistration", () => {
+  const base = { chainName: "BOT Chain Testnet (Bohr)", target: TARGET, account: "0x1111111111111111111111111111111111111111", repo: "https://github.com/acme/vault", buildHash: "" };
+
+  it("names the contract, the network, the proof and the source", () => {
+    const r = reviewRegistration({ ...base, method: "OWNER" });
+    const text = r.lines.map((l) => `${l.term}: ${l.value}`).join("\n");
+    expect(text).toContain("on BOT Chain Testnet (Bohr)");
+    expect(text).toContain("is the owner of this contract (owner())");
+    expect(text).toContain("acme/vault");
+    expect(r.unproven).toBe(false);
+    expect(r.consent).toMatch(/I control this contract/);
+  });
+
+  it("describes each way of proving control", () => {
+    expect(reviewRegistration({ ...base, method: "ADMIN_ROLE" }).lines[1].value).toMatch(/admin role/);
+    expect(reviewRegistration({ ...base, method: "DEPLOYER" }).lines[1].value).toMatch(/deployed this contract/);
+  });
+
+  it("asks for a different, stronger confirmation when nothing proves control", () => {
+    const r = reviewRegistration({ ...base, method: "NONE" });
+    expect(r.unproven).toBe(true);
+    expect(r.lines[1].value).toMatch(/self-attested/);
+    expect(r.consent).toMatch(/nothing proves I control this contract/);
+    expect(r.consent).not.toBe(reviewRegistration({ ...base, method: "OWNER" }).consent);
+  });
+
+  it("includes the build when there is one, and says the record is permanent history", () => {
+    const r = reviewRegistration({ ...base, method: "OWNER", buildHash: "abc123" });
+    expect(r.lines[2].value).toContain("build abc123");
+    expect(r.lines[3].value).toMatch(/Permanent/);
   });
 });
 

@@ -11,10 +11,12 @@ import type { Registration } from "./registry";
  *                 (or the registry cannot track code changes, i.e. v1)
  * stale           the proof no longer holds: control moved or the code changed
  * self-attested   a claim with no on-chain proof
- * unverified      no record
+ * unverified      a contract with no record
+ * wallet          no record and no contract code: a wallet, so nothing to verify
+ *                 (decided by the lookup from the chain, not by decideLevel)
  * unknown         could not read the registry
  */
-export type Level = "verified" | "control-proven" | "stale" | "self-attested" | "unverified" | "unknown";
+export type Level = "verified" | "control-proven" | "stale" | "self-attested" | "unverified" | "wallet" | "unknown";
 
 export const LEVELS: Readonly<Record<Level, { label: string; short: string; css: string }>> = {
   verified: { label: "Tally Verified", short: "verified", css: "verified" },
@@ -22,6 +24,7 @@ export const LEVELS: Readonly<Record<Level, { label: string; short: string; css:
   stale: { label: "Stale record", short: "stale", css: "stale" },
   "self-attested": { label: "Self-attested", short: "self-attested", css: "self" },
   unverified: { label: "Unverified", short: "unverified", css: "unverified" },
+  wallet: { label: "Not a contract", short: "not a contract", css: "wallet" },
   unknown: { label: "Unavailable", short: "unknown", css: "unknown" },
 };
 
@@ -95,6 +98,8 @@ export function describe(level: Level, registration?: Evidence | null, repo?: Pi
       return "A source repository was claimed without any on-chain proof of control.";
     case "unverified":
       return "No Tally record exists for this address.";
+    case "wallet":
+      return "This address holds no contract code, so it is a wallet. Tally records provenance for contracts, not wallets.";
     default:
       return "Could not read the registry right now.";
   }

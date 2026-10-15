@@ -26,6 +26,40 @@ test("unregistered everywhere is 'unverified'", async () => {
   assert.equal(world.calls.filter((c) => c.url.includes("raw.githubusercontent")).length, 0, "no repo request when there is no record");
 });
 
+test("an unrecorded address that holds no code is a 'wallet', not 'unverified'", async () => {
+  const world = fakeWorld({ rpc: rpcFor({ [REG_V2]: { [sel]: none(2) }, [REG_V1]: { [sel]: none(1) } }), code: { [TARGET]: "0x" } });
+  const result = await run(both, world);
+  assert.equal(result.ok, true);
+  assert.equal(result.level, "wallet");
+  assert.equal(result.registration, null);
+});
+
+test("an unrecorded address that holds code stays 'unverified'", async () => {
+  const world = fakeWorld({ rpc: rpcFor({ [REG_V2]: { [sel]: none(2) }, [REG_V1]: { [sel]: none(1) } }), code: { [TARGET]: "0x6080604052" } });
+  assert.equal((await run(both, world)).level, "unverified");
+});
+
+test("if the chain cannot say whether it is a contract, the answer is 'unknown', never 'unverified'", async () => {
+  const world = fakeWorld({ rpc: rpcFor({ [REG_V2]: { [sel]: none(2) }, [REG_V1]: { [sel]: none(1) } }), code: { [TARGET]: new Error("socket hang up") } });
+  const result = await run(both, world);
+  assert.equal(result.ok, false);
+  assert.equal(result.level, "unknown");
+});
+
+test("rejects a malformed eth_getCode answer instead of guessing", async () => {
+  const world = fakeWorld({ rpc: rpcFor({ [REG_V2]: { [sel]: none(2) }, [REG_V1]: { [sel]: none(1) } }), code: { [TARGET]: "not hex" } });
+  const result = await run(both, world);
+  assert.equal(result.ok, false);
+  assert.equal(result.level, "unknown");
+});
+
+test("a recorded address never costs an eth_getCode call", async () => {
+  const world = fakeWorld({ rpc: rpcFor({ [REG_V2]: { [sel]: encodeV2() }, [REG_V1]: { [sel]: none(1) } }), files: {}, code: { [TARGET]: "0x" } });
+  const result = await run(both, world);
+  assert.notEqual(result.level, "wallet");
+  assert.equal(world.calls.filter((c) => JSON.parse(c.init.body || "{}").method === "eth_getCode").length, 0);
+});
+
 test("v2 control proof + live control + unchanged code + listed repo is 'verified'", async () => {
   const world = fakeWorld({ rpc: rpcFor({ [REG_V2]: { [sel]: encodeV2() }, [REG_V1]: { [sel]: none(1) } }), files: { [FILE]: LISTS_TARGET } });
   const result = await run(both, world);

@@ -44,7 +44,8 @@ export const NONE_V2 = () => encodeV2({ repo: "", signer: ZERO, at: 0n, prov: 0,
 export const addressWord = (a: Address): Hex => `0x${a.slice(2).toLowerCase().padStart(64, "0")}`;
 export const boolWord = (b: boolean): Hex => `0x${(b ? "1" : "0").padStart(64, "0")}`;
 
-type RpcReply = string | Error | { error: { code: number; message: string } };
+/** A reply is a value, an Error to throw, an RPC error object, or a function of the request params. */
+type RpcReply = string | Error | { error: { code: number; message: string } } | ((params: unknown[]) => unknown) | unknown[] | Record<string, unknown>;
 export type FakeFetch = ((url: string, init?: RequestInit) => Promise<Response>) & { calls: { url: string; init?: RequestInit }[] };
 
 /**
@@ -73,10 +74,13 @@ export function fakeWorld(spec: { rpc?: Record<string, Record<string, RpcReply>>
       if (reply === undefined) return Response.json({ jsonrpc: "2.0", id: 1, error: { code: 3, message: "execution reverted" } });
     } else {
       reply = rpc["*"]?.[body.method] ?? rpc[String(body.params[0]).toLowerCase()]?.[body.method];
+      // Every address holds code unless a test says otherwise ("0x" = a wallet).
+      if (reply === undefined && body.method === "eth_getCode") reply = "0x6001";
       if (reply === undefined) return Response.json({ jsonrpc: "2.0", id: 1, error: { code: -32601, message: `no fake for ${body.method}` } });
     }
+    if (typeof reply === "function") reply = reply(body.params) as RpcReply;
     if (reply instanceof Error) throw reply;
-    if (typeof reply === "object" && "error" in reply) return Response.json({ jsonrpc: "2.0", id: 1, error: reply.error });
+    if (reply && typeof reply === "object" && !Array.isArray(reply) && "error" in reply) return Response.json({ jsonrpc: "2.0", id: 1, error: (reply as { error: unknown }).error });
     return Response.json({ jsonrpc: "2.0", id: 1, result: reply });
   }) as FakeFetch;
   fn.calls = calls;

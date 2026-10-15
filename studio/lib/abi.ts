@@ -18,6 +18,8 @@ export const registryV2Abi = parseAbi([
   "function hashClaim((address target, address signer, string githubRepo, string buildHash, uint8 method, uint256 deployerNonce, uint256 deadline) c) view returns (bytes32)",
   "function domainSeparator() view returns (bytes32)",
   "function REGISTRY_VERSION() view returns (uint256)",
+  "function historyLength(address target) view returns (uint256)",
+  "function getHistory(address target, uint256 start, uint256 count) view returns ((address signer, uint64 blockNumber, uint8 kind, uint8 provenance, uint8 method)[] page)",
   "event Registered(address indexed target, address indexed signer, uint8 provenance, uint8 method, string githubRepo, string buildHash, bytes32 codehash)",
   "event Revoked(address indexed target, address indexed by)",
   "error InvalidSigner()",

@@ -56,6 +56,7 @@
       return;
     }
     box.append(el("p", "", status.describe(level, outcome.registration, outcome.repo)));
+    if (level === "wallet") return; // nothing to register or open for a wallet
 
     const reg = outcome.registration;
     if (reg) {
@@ -68,8 +69,7 @@
       box.append(dl);
     }
 
-    const href = level === "unverified" ? safe.studioRegisterUrl(config, chain, address) : safe.studioDetailUrl(config, chain, address);
-    const cta = link(level === "unverified" ? "Register this contract \u2192" : "Open full record \u2192", href);
+    const cta = link("Open full record \u2192", safe.studioDetailUrl(config, chain, address));
     cta.className = "cta";
     box.append(cta);
   }
@@ -96,17 +96,37 @@
     });
   }
 
+  // The last network picked, kept in the popup's own storage (no browser permission needed).
+  // Storage can be blocked, and a saved key can outlive the network, so both are tolerated.
+  const SAVED_CHAIN = "tally.chain";
+  function savedChain() {
+    try {
+      const key = window.localStorage.getItem(SAVED_CHAIN);
+      return key && safe.chainByKey(config, key) ? key : null;
+    } catch (_error) {
+      return null;
+    }
+  }
+  function saveChain(key) {
+    try {
+      window.localStorage.setItem(SAVED_CHAIN, key);
+    } catch (_error) {
+      // the choice just will not be remembered
+    }
+  }
+
   function init() {
     for (const chain of config.chains) {
       const option = el("option", "", chain.name + " \u00b7 " + chain.id);
       option.value = chain.key;
       $("chain").append(option);
     }
-    $("chain").value = config.defaultChain;
+    $("chain").value = savedChain() || config.defaultChain;
     $("studioLink").href = config.studioUrl;
     refreshPresets();
 
     $("chain").addEventListener("change", () => {
+      saveChain($("chain").value);
       refreshPresets();
       $("result").className = "result hidden";
     });

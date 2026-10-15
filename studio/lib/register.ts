@@ -84,6 +84,39 @@ export function explainPlan(plan: ProofPlan, ctx: { registryVersion: 1 | 2; chai
   }
 }
 
+export interface Review {
+  lines: { term: string; value: string }[];
+  /** The sentence the person must agree to before the sign button works. */
+  consent: string;
+  /** True when nothing proves control: the record will be a self-attested claim. */
+  unproven: boolean;
+}
+
+/** What the person is about to sign, in plain words, so nobody registers by accident. */
+export function reviewRegistration(a: { chainName: string; target: string; account: string; method: ProofMethod; repo: string; buildHash: string }): Review {
+  const unproven = a.method === "NONE";
+  const repo = parseGithubRepo(a.repo);
+  const wallet = shorten(a.account);
+  const proof: Record<ProofMethod, string> = {
+    NONE: "None. This will be a self-attested claim.",
+    OWNER: `Your wallet ${wallet} is the owner of this contract (owner())`,
+    ADMIN_ROLE: `Your wallet ${wallet} holds the admin role of this contract`,
+    DEPLOYER: `Your wallet ${wallet} deployed this contract`,
+  };
+  return {
+    unproven,
+    lines: [
+      { term: "Contract", value: `${shorten(a.target)} on ${a.chainName}` },
+      { term: "Proof", value: proof[a.method] },
+      { term: "Source", value: `${repo ? `${repo.owner}/${repo.repo}` : a.repo}${a.buildHash ? `, build ${a.buildHash}` : ""}` },
+      { term: "Public", value: "Permanent. Every registration stays in this contract's history. Nothing about the contract itself changes." },
+    ],
+    consent: unproven
+      ? "I understand this will be recorded as self-attested: nothing proves I control this contract, and everyone will see it labelled unproven."
+      : "I control this contract and I am allowed to link it to this repository.",
+  };
+}
+
 /** The file that goes at the repository root so the record can become "verified". */
 export function tallyJsonSnippet(chainId: number, address: string): string {
   return `${JSON.stringify({ version: 1, contracts: [{ chainId, address }] }, null, 2)}\n`;

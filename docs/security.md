@@ -61,6 +61,28 @@ attacker (or the maintainer) to take over.
 | Hostile targets | `owner()` and `hasRole()` are probed with a gas cap and exactly one return word read. A target cannot revert the registration, burn meaningful gas, or return oversized data. Tested against gas bombs, return bombs, reverting and dirty-answer targets. |
 | Stored text is constrained | Repository: `https://github.com/` prefix, characters `[A-Za-z0-9._/-]`, no empty or dot-only segments, 200 bytes at most. Build hash: `[A-Za-z0-9._-]`, 66 bytes at most. So `javascript:` URLs, markup and control characters never reach storage. |
 | Removal | The record's signer, or whoever controls the target now, can `revoke` it. |
+| History | The registry keeps one current record per contract but forgets nothing: every registration and removal is appended to that contract's history (`historyLength`, `getHistory`). A replaced or revoked record stays readable, with who signed it and in which block; the repository and build hash of each entry are in that block's `Registered` event. Reading it needs one call and single-block log queries, which every RPC allows. |
+
+### Handing a contract to a new owner
+
+Tally keeps no owner list of its own, because a record is only as good as who controls the
+contract today. To hand one over, move control of the contract itself (call
+`transferOwnership(newOwner)`, or move the admin role). The new controller then registers and
+signs once; their record replaces the old one, and the old one stays in the history. Until they
+do, the record reads **stale**, because its signer no longer controls the contract.
+
+### Wallets are not contracts
+
+An address with no code cannot be registered (the registry reverts `NoCode`), so clients never
+badge one. When no registry has a record and the address holds no code, the studio says "Not a
+contract" and the extension draws nothing. If the chain cannot say whether an address holds code,
+the answer is "unavailable", never "unverified".
+
+### What a badge asks of the reader
+
+A badge is read by people checking a contract, so it states a status and nothing else: the
+extension never says "Register" and every badge opens the contract's record page. Registering is
+offered there, in words, to the contract's controller.
 
 Known on-chain limits: deployer proofs support deployer nonces up to 2^32 - 1; a signature
 must be used in order (a signer's nonce moves on after any registration they make); the

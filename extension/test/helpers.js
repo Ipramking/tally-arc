@@ -60,7 +60,9 @@ function fakeFetch(handler) {
  * rpc: { [toLower]: { [selector]: resultHex | Error | {error:{code,message}} } }
  * files: { [url]: string | number (status) | Error }
  */
-function fakeWorld({ rpc = {}, files = {} } = {}) {
+function fakeWorld({ rpc = {}, files = {}, code = {} } = {}) {
+  // eth_getCode: every address holds code unless a test says otherwise ("0x" = a wallet).
+  const codeOf = Object.fromEntries(Object.entries(code).map(([k, v]) => [k.toLowerCase(), v]));
   return fakeFetch(async (url, init) => {
     if (url.startsWith("https://raw.githubusercontent.com/")) {
       const file = files[url];
@@ -70,6 +72,12 @@ function fakeWorld({ rpc = {}, files = {} } = {}) {
       return textResponse(file);
     }
     const body = JSON.parse(init.body);
+    if (body.method === "eth_getCode") {
+      const reply = String(body.params[0]).toLowerCase() in codeOf ? codeOf[String(body.params[0]).toLowerCase()] : "0x6001";
+      if (reply instanceof Error) throw reply;
+      if (reply && reply.error) return Response.json({ jsonrpc: "2.0", id: 1, error: reply.error });
+      return Response.json({ jsonrpc: "2.0", id: 1, result: reply });
+    }
     const { to, data } = body.params[0];
     const reply = (rpc[to.toLowerCase()] || {})[data.slice(0, 10)];
     if (reply instanceof Error) throw reply;

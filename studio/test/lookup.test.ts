@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { toFunctionSelector } from "viem";
+import { badgeSvg } from "@/lib/badge";
 import { lookupContract } from "@/lib/lookup";
+import { describe as describeLevel, LEVELS } from "@/lib/status";
 import { addressWord, arcChain, encodeV1, encodeV2, fakeWorld, NONE_V1, NONE_V2, REG_V1, REG_V2, REPO, SIGNER, tallyJson, TARGET } from "./helpers";
 
 const SEL = toFunctionSelector("getRegistration(address)");
@@ -18,6 +20,36 @@ describe("lookupContract", () => {
     const result = await run(both, world);
     expect(result).toMatchObject({ ok: true, level: "unverified", registration: null });
     expect(world.calls.filter((c) => c.url.includes("raw.githubusercontent"))).toHaveLength(0);
+  });
+
+  it("an unrecorded address that holds no code is a 'wallet', not 'unverified'", async () => {
+    const world = fakeWorld({ rpc: { [REG_V2]: { [SEL]: NONE_V2() }, [REG_V1]: { [SEL]: NONE_V1() }, [TARGET]: { eth_getCode: "0x" } } });
+    expect(await run(both, world)).toMatchObject({ ok: true, level: "wallet", registration: null });
+  });
+
+  it("an unrecorded address that holds code stays 'unverified'", async () => {
+    const world = fakeWorld({ rpc: { [REG_V2]: { [SEL]: NONE_V2() }, [REG_V1]: { [SEL]: NONE_V1() }, [TARGET]: { eth_getCode: "0x6080604052" } } });
+    expect(await run(both, world)).toMatchObject({ ok: true, level: "unverified" });
+  });
+
+  it("if the chain cannot say whether it is a contract, the answer is 'unknown', never 'unverified'", async () => {
+    for (const reply of [new Error("socket hang up"), "not hex", { error: { code: -32000, message: "boom" } }]) {
+      const world = fakeWorld({ rpc: { [REG_V2]: { [SEL]: NONE_V2() }, [REG_V1]: { [SEL]: NONE_V1() }, [TARGET]: { eth_getCode: reply as never } } });
+      expect(await run(both, world)).toMatchObject({ ok: false, level: "unknown" });
+    }
+  });
+
+  it("a recorded address never costs an eth_getCode call", async () => {
+    const world = fakeWorld({ rpc: { [REG_V2]: { [SEL]: encodeV2() }, [REG_V1]: { [SEL]: NONE_V1() }, [TARGET]: { eth_getCode: "0x" } } });
+    const result = await run(both, world);
+    expect(result.level).not.toBe("wallet");
+    expect(world.calls.filter((c) => JSON.parse(String(c.init?.body ?? "{}")).method === "eth_getCode")).toHaveLength(0);
+  });
+
+  it("describes a wallet in plain words and gives it a neutral badge", () => {
+    expect(describeLevel("wallet")).toMatch(/wallet/);
+    expect(LEVELS.wallet.label).toBe("Not a contract");
+    expect(badgeSvg("wallet")).toContain("not a contract");
   });
 
   it("v2 proof + live control + unchanged code + listed repo is 'verified'", async () => {

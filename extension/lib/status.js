@@ -13,7 +13,9 @@
    *                 (or the registry cannot track code changes, i.e. v1)
    * stale           the proof no longer holds: control moved or the code changed
    * self-attested   a claim with no on-chain proof
-   * unverified      no record
+   * unverified      a contract with no record
+   * wallet          no record and no contract code: a wallet, so nothing to verify
+   *                 (decided by the lookup from the chain, not by decideLevel)
    * unknown         could not read the registry
    */
   const LEVELS = {
@@ -22,6 +24,7 @@
     stale: { label: "Stale record", short: "Stale" },
     "self-attested": { label: "Self-attested", short: "Self-attested" },
     unverified: { label: "Unverified", short: "Unverified" },
+    wallet: { label: "Not a contract", short: "Wallet" },
     unknown: { label: "Tally unavailable", short: "Unknown" },
   };
 
@@ -103,6 +106,8 @@
         return "A source repository was claimed without any on-chain proof of control.";
       case "unverified":
         return "No Tally record exists for this address.";
+      case "wallet":
+        return "This address holds no contract code, so it is a wallet. Tally records provenance for contracts, not wallets.";
       default:
         return "Could not read the registry right now.";
     }

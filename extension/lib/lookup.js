@@ -39,10 +39,14 @@
       if (best && status.isLive(best)) {
         repo = await repoProof.checkRepoProof({ repoUrl: best.githubRepo, chainId: chain.id, address, fetchImpl, timeoutMs });
       }
+      let level = status.decideLevel(best, repo);
+      // No record: a wallet has no code, so there is nothing to verify and nothing to register.
+      // If the chain cannot say, that throws and the answer is "unknown", never "unverified".
+      if (level === "unverified" && !(await registry.hasCode(chain.rpcUrl, address, fetchImpl, timeoutMs))) level = "wallet";
       const parsed = best ? safe.parseGithubRepo(best.githubRepo) : null;
       return {
         ok: true,
-        level: status.decideLevel(best, repo),
+        level,
         registration: best,
         repo,
         repoLink: parsed ? parsed.url : null,

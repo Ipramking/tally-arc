@@ -1,16 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import type { Address } from "viem";
 import { Checklist, buildChecklist } from "../../components/Checklist";
 import { CopyButton } from "../../components/CopyButton";
+import { ProvenanceHistory } from "../../components/History";
 import { Nav } from "../../components/Nav";
+import { SnippetView } from "../../components/SnippetView";
 import { StatusBadge } from "../../components/StatusBadge";
 import { chainLabel, explorerAddressUrl, resolveChain, serverChain, STUDIO_URL, type ChainDef } from "@/lib/chain";
+import { mergeHistories, readHistory } from "@/lib/history";
 import { lookupContract } from "@/lib/lookup";
-import { tallyJsonSnippet } from "@/lib/register";
 import { METHOD_LABEL } from "@/lib/registry";
 import { displayText, isAddress, parseGithubRepo, shorten } from "@/lib/safe-url";
 import { describe, isLive, LEVELS } from "@/lib/status";
+import { buildTallySnippet } from "@/lib/tally-snippet";
 
 type Props = {
   params: Promise<{ address: string }>;
@@ -22,10 +26,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: isAddress(address) ? shorten(address) : "Contract record" };
 }
 
+// Registering is for the contract's controller, so it is offered as an option, in words, never as the page's main action.
+const OWNER_COPY = {
+  unverified:
+    "Nobody has registered this contract yet. That says nothing bad about it: only the wallet that controls a contract can add a record, and many contracts never get one. If you are only checking a contract, there is nothing to do here.",
+  "self-attested":
+    "This record is a claim with no on-chain proof behind it. If you control this contract you can replace it with a proven one. If you are only checking, treat it as an unproven claim.",
+  stale:
+    "The wallet that registered this contract no longer controls it, or its code changed. If you control it now you can register it again; the old record stays in the history.",
+} as const;
+
 function Shell({ chain, eyebrow, title, lede, children }: { chain: ChainDef | null; eyebrow: string; title: string; lede: string; children?: ReactNode }) {
   return (
     <>
-      <Nav chip={chain ? chainLabel(chain) : undefined}>
+      <Nav chain={chain?.key}>
         <Link href="/" className="hide-sm">
           Home
         </Link>
@@ -58,7 +72,12 @@ export default async function RecordPage({ params, searchParams }: Props) {
     return <Shell chain={chain} eyebrow="Provenance record" title="Not an address." lede="That does not look like a contract address: it should start with 0x and be 42 characters long." />;
   }
 
-  const result = await lookupContract({ chain: serverChain(chain), address });
+  const server = serverChain(chain);
+  const [result, histories] = await Promise.all([
+    lookupContract({ chain: server, address }),
+    Promise.all(chain.registries.map((registry) => readHistory(server, registry, address as Address))),
+  ]);
+  const history = mergeHistories(histories);
   const level = result.level;
   const registration = result.ok ? result.registration : null;
   const lede = result.ok ? describe(level, registration, result.repo) : `Could not read ${chain.name} right now (${displayText(result.error, 120)}). Try again shortly.`;
@@ -67,6 +86,8 @@ export default async function RecordPage({ params, searchParams }: Props) {
   const parsedRepo = registration ? parseGithubRepo(registration.githubRepo) : null;
   const hasV2 = chain.registries.some((r) => r.version === 2);
   const needsTallyJson = result.ok && registration !== null && isLive(registration) && result.repo?.status !== "confirmed";
+  // Merged with what the repository already lists, so adding this contract never drops the others.
+  const snippet = needsTallyJson && registration && registration.registryVersion === 2 ? await buildTallySnippet({ repoUrl: registration.githubRepo, chainId: chain.id, address }) : null;
   const badgeUrl = `${STUDIO_URL}/api/badge/${address}?chain=${chain.key}`;
   const registerHref = `/register?address=${address}&chain=${chain.key}`;
   const canRegister = chain.registries.length > 0;
@@ -121,14 +142,6 @@ export default async function RecordPage({ params, searchParams }: Props) {
           )}
         </dl>
 
-        {(level === "unverified" || level === "self-attested" || level === "stale") && canRegister && (
-          <div className="mt-24">
-            <Link href={registerHref} className="btn">
-              {level === "unverified" ? "Register this contract" : "Register again"}
-              <span aria-hidden="true">&rarr;</span>
-            </Link>
-          </div>
-        )}
       </section>
 
       {result.ok && registration && (
@@ -140,6 +153,8 @@ export default async function RecordPage({ params, searchParams }: Props) {
         </section>
       )}
 
+      {chain.registries.length > 0 && level !== "wallet" && <ProvenanceHistory chain={chain} history={history} />}
+
       {needsTallyJson && registration && (
         <section className="panel" aria-label="Make it verified">
           <div className="kicker">Make it verified</div>
@@ -150,27 +165,57 @@ export default async function RecordPage({ params, searchParams }: Props) {
             </p>
           ) : (
             <>
-              <p className="hint">Add this file to the root of the repository as tally.json (on the default branch). The record turns verified as soon as it is live.</p>
-              <div className="mt-24 stack">
-                <pre className="code">{tallyJsonSnippet(chain.id, address)}</pre>
-                <CopyButton text={tallyJsonSnippet(chain.id, address)} label="Copy tally.json" />
-              </div>
+              <p className="hint">The record turns verified as soon as the repository&apos;s tally.json, on the default branch, lists this contract.</p>
+              {snippet && (
+                <div className="mt-24">
+                  <SnippetView snippet={snippet} />
+                </div>
+              )}
             </>
           )}
         </section>
       )}
 
-      <section className="panel" aria-label="Badge">
-        <div className="kicker">Live badge</div>
-        <div className="mt-24 stack">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`/api/badge/${address}?chain=${chain.key}`} alt={`Tally status for ${shorten(address)}`} height={20} />
-          <div className="snippet">
-            <code>{`![Tally](${badgeUrl})`}</code>
-            <CopyButton text={`![Tally](${badgeUrl})`} label="Copy" />
+      {(level === "unverified" || level === "self-attested" || level === "stale") && canRegister && (
+        <section className="panel" aria-label="Is this your contract?">
+          <div className="kicker">Is this your contract?</div>
+          <p className="hint">{OWNER_COPY[level]}</p>
+          <div className="mt-24">
+            <Link href={registerHref} className="btn-ghost">
+              <span className="u">I control this contract: register it</span>
+              <span className="arw" aria-hidden="true">
+                &rarr;
+              </span>
+            </Link>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {registration && (
+        <section className="panel" aria-label="Handing it over">
+          <div className="kicker">Handing it to someone else</div>
+          <p className="hint">Tally keeps no owner list of its own. A record is only as good as who controls the contract today, so handing it over has two steps:</p>
+          <ol className="how">
+            <li>Move control of the contract itself. From the wallet that controls it now, call transferOwnership(newOwner), or move the admin role. That is the only thing that changes hands.</li>
+            <li>The new controller opens Register for this contract and signs once. Their record replaces this one, and this one stays in the history above.</li>
+          </ol>
+          <p className="hint">Until the new controller registers, this record reads stale: the signer above no longer controls the contract.</p>
+        </section>
+      )}
+
+      {level !== "wallet" && (
+        <section className="panel" aria-label="Badge">
+          <div className="kicker">Live badge</div>
+          <div className="mt-24 stack">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`/api/badge/${address}?chain=${chain.key}`} alt={`Tally status for ${shorten(address)}`} height={20} />
+            <div className="snippet">
+              <code>{`![Tally](${badgeUrl})`}</code>
+              <CopyButton text={`![Tally](${badgeUrl})`} label="Copy" />
+            </div>
+          </div>
+        </section>
+      )}
     </Shell>
   );
 }

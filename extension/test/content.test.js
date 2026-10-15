@@ -62,13 +62,45 @@ test("badges the page's own address and links to the studio", async () => {
 });
 
 test("every level renders its own class and label", async () => {
-  const levels = { verified: "Tally Verified", "control-proven": "Control proven", stale: "Stale record", "self-attested": "Self-attested", unverified: "Unverified \u00b7 Register", unknown: "Tally unavailable" };
+  const levels = { verified: "Tally Verified", "control-proven": "Control proven", stale: "Stale record", "self-attested": "Self-attested", unverified: "Unverified", unknown: "Tally unavailable" };
   for (const [level, label] of Object.entries(levels)) {
     const { document } = boot({ respond: () => reply(level) });
     assert.ok(await waitFor(() => badges(document).length === 1), level);
     assert.ok(badges(document)[0].classList.contains(`tally-${level}`), level);
     assert.equal(badges(document)[0].textContent, label);
   }
+});
+
+test("a wallet gets no badge at all, while a contract beside it still does", async () => {
+  const wallet = A(7);
+  const contract = A(8);
+  const body = `
+    <h1>Contract details</h1>
+    <a id="creator" href="/address/${wallet}">creator</a>
+    <a id="sibling" href="/address/${contract}">contract</a>`;
+  const { document, sent } = boot({
+    url: `https://explorer.arc.io/address/${contract}`,
+    body,
+    respond: (m) => (m.address.toLowerCase() === wallet.toLowerCase() ? reply("wallet") : reply("unverified")),
+  });
+  assert.ok(await waitFor(() => badges(document).length === 1));
+  await sleep(60); // give the wallet's answer time to land: it must still not draw anything
+  assert.equal(badges(document).length, 1);
+  assert.equal(document.querySelector("#creator").nextElementSibling?.classList.contains("tally-badge") ?? false, false);
+  assert.ok(document.querySelector("#sibling").nextElementSibling.classList.contains("tally-unverified"));
+  assert.ok(sent.some((m) => m.address === wallet), "the wallet was still looked up once");
+});
+
+test("a wallet is looked up once, not again on every re-scan", async () => {
+  const wallet = A(9);
+  const { document, sent } = boot({ body: `<h1>Address</h1><a href="/address/${wallet}">w</a>`, respond: () => reply("wallet") });
+  await sleep(80);
+  const before = sent.filter((m) => m.address === wallet).length;
+  assert.equal(before, 1);
+  document.body.append(document.createElement("div")); // DOM churn triggers another scan
+  await sleep(600);
+  assert.equal(sent.filter((m) => m.address === wallet).length, 1);
+  assert.equal(badges(document).length, 0);
 });
 
 test("inline links get one badge per address; off-site and non-address links are ignored", async () => {

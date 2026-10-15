@@ -12,8 +12,9 @@ const REG_V1 = chains.chains[0].registries[0].address.toLowerCase();
 const FILE = "https://raw.githubusercontent.com/acme/vault/HEAD/tally.json";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-function open(fetchImpl) {
-  const dom = new JSDOM(HTML, { url: "chrome-extension://tally/popup/popup.html", runScripts: "outside-only" });
+function open(fetchImpl, { url = "chrome-extension://tally/popup/popup.html", prepare } = {}) {
+  const dom = new JSDOM(HTML, { url, runScripts: "outside-only" });
+  if (prepare) prepare(dom.window);
   dom.window.fetch = fetchImpl;
   dom.window.TextDecoder = TextDecoder; // jsdom does not provide it; browsers do
   for (const source of SCRIPTS) dom.window.eval(source);
@@ -41,6 +42,32 @@ test("lists the configured chains and shows presets only where they exist", () =
   assert.equal($("studioLink").href, chains.studioUrl + "/");
 });
 
+const HTTP = "http://tally.test/popup/popup.html"; // a real origin, so jsdom gives the popup a localStorage
+
+test("remembers the network the person picked", () => {
+  const { $, document, window } = open(world(), { url: HTTP });
+  $("chain").value = "bot-testnet";
+  $("chain").dispatchEvent(new document.defaultView.Event("change"));
+  assert.equal(window.localStorage.getItem("tally.chain"), "bot-testnet");
+});
+
+test("opens on the saved network, not always the default", () => {
+  const { $ } = open(world(), { url: HTTP, prepare: (w) => w.localStorage.setItem("tally.chain", "bot-testnet") });
+  assert.equal($("chain").value, "bot-testnet");
+});
+
+test("falls back to the default when the saved network no longer exists", () => {
+  const { $ } = open(world(), { url: HTTP, prepare: (w) => w.localStorage.setItem("tally.chain", "gone-chain") });
+  assert.equal($("chain").value, chains.defaultChain);
+});
+
+test("still works when storage is unavailable", () => {
+  const { $, document } = open(world()); // the default test origin is opaque: localStorage throws
+  assert.equal($("chain").value, chains.defaultChain);
+  $("chain").value = "bot-testnet";
+  assert.doesNotThrow(() => $("chain").dispatchEvent(new document.defaultView.Event("change")));
+});
+
 test("rejects a malformed address without a request", async () => {
   const fetchImpl = world();
   const { $, check } = open(fetchImpl);
@@ -49,15 +76,27 @@ test("rejects a malformed address without a request", async () => {
   assert.equal(fetchImpl.calls.length, 0);
 });
 
-test("an unregistered address offers registration", async () => {
+test("an unregistered address opens its record, not the register form", async () => {
   const { $, check } = open(world());
   await check(TARGET);
   const box = $("result");
   assert.ok(box.classList.contains("unverified"));
   assert.match(box.textContent, /Unverified/);
+  assert.doesNotMatch(box.textContent, /Register/, "a visitor who is only checking must not be nudged to register");
   const cta = box.querySelector("a.cta");
-  assert.equal(cta.getAttribute("href"), `${chains.studioUrl}/register?address=${TARGET}&chain=arc`);
+  assert.equal(cta.getAttribute("href"), `${chains.studioUrl}/c/${TARGET}?chain=arc`);
+  assert.match(cta.textContent, /Open full record/);
   assert.equal(cta.rel, "noopener noreferrer");
+});
+
+test("a wallet is called a wallet, with no register link", async () => {
+  const { $, check } = open(world({ code: { [TARGET]: "0x" } }));
+  await check(TARGET);
+  const box = $("result");
+  assert.ok(box.classList.contains("wallet"));
+  assert.match(box.textContent, /Not a contract/);
+  assert.match(box.textContent, /wallet/i);
+  assert.equal(box.querySelector("a"), null, "nothing to register or open for a wallet");
 });
 
 test("a live v1 owner shows 'Control proven' with the canonical repo link", async () => {

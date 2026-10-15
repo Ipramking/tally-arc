@@ -28,11 +28,12 @@ test("rejects bad input without touching the network", async () => {
   assert.equal(world.calls.length, 0);
 });
 
-test("an unregistered contract points the badge at the register page", async () => {
+test("an unregistered contract points the badge at its record page, never the register form", async () => {
   const result = await background.handleLookup(lookupMsg(), fromArc, registered());
   assert.equal(result.ok, true);
   assert.equal(result.level, "unverified");
-  assert.equal(result.href, `${chains.studioUrl}/register?address=${TARGET}&chain=arc`);
+  assert.equal(result.href, `${chains.studioUrl}/c/${TARGET}?chain=arc`);
+  assert.doesNotMatch(result.href, /\/register/);
   assert.match(result.summary, /No Tally record/);
 });
 
