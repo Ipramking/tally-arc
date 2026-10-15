@@ -70,6 +70,7 @@ export function pickBest<T extends Evidence>(registrations: readonly T[]): T | n
 
 const REPO_TEXT: Readonly<Record<string, string>> = {
   "not-listed": "the repository does not list this contract in tally.json",
+  "signer-mismatch": "the repository's tally.json names a different wallet for this contract",
   "no-file": "the repository has no tally.json",
   "invalid-file": "the repository's tally.json is invalid",
   "invalid-repo": "the repository link on-chain is not a plain GitHub repository",

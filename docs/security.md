@@ -97,17 +97,33 @@ repository. So "verified" additionally requires the repository to agree.
 The repository publishes `tally.json` at its root, on the default branch:
 
 ```json
-{ "version": 1, "contracts": [ { "chainId": 5042, "address": "0x..." } ] }
+{ "version": 1, "contracts": [ { "chainId": 5042, "address": "0x...", "signer": "0x..." } ] }
 ```
+
+`signer` is optional. It names the wallet the repository authorises to register that
+contract. When an entry names a wallet it must be the wallet that signed the on-chain record;
+if it names a different one (or a value that is not an address) the record is **not**
+verified. When an entry names none, it still confirms, as it did before the field existed.
+That makes a hand-over explicit on both sides: the new controller registers, and the
+repository's owner updates one line to name them.
 
 Clients fetch `https://raw.githubusercontent.com/<owner>/<repo>/HEAD/tally.json` with:
 the owner and repo name validated first; no redirects; no credentials; a timeout; at most
 64 KB; only the first 1000 entries read; strict shape and version checks. Results are
-`confirmed`, `not-listed`, `no-file`, `invalid-file`, `invalid-repo` or `unavailable`. Only
-`confirmed` can contribute to "verified".
+`confirmed`, `not-listed`, `signer-mismatch`, `no-file`, `invalid-file`, `invalid-repo` or
+`unavailable`. Only `confirmed` can contribute to "verified". The studio and the extension apply
+the same rule, and both are tested against
+[`test-vectors/repo-signer.json`](../test-vectors/repo-signer.json) so they cannot drift apart.
+
+The studio never asks anyone to replace their `tally.json` blindly. It reads the current file and
+offers one that keeps every existing entry, adds the new contract (naming the wallet that
+registered it), and, if an entry names a different wallet, shows that one change. If it cannot
+read the file it offers a single entry to add, never a whole file.
 
 Limits you should know about:
 
+- **A file without `signer` does not bind a wallet.** It proves the repository lists the
+  contract, not which wallet it authorises. Naming the wallet closes that gap.
 - **Repo-jacking.** If a GitHub account is renamed or deleted, someone else can register
   the old name and publish a `tally.json` there. A record naming the old repository would
   then be confirmed by the wrong party.

@@ -37,7 +37,7 @@
       const best = status.pickBest(records);
       let repo = null;
       if (best && status.isLive(best)) {
-        repo = await repoProof.checkRepoProof({ repoUrl: best.githubRepo, chainId: chain.id, address, fetchImpl, timeoutMs });
+        repo = await repoProof.checkRepoProof({ repoUrl: best.githubRepo, chainId: chain.id, address, signer: best.signer, fetchImpl, timeoutMs });
       }
       let level = status.decideLevel(best, repo);
       // No record: a wallet has no code, so there is nothing to verify and nothing to register.

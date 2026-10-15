@@ -261,7 +261,7 @@ export function RegisterForm({ chain, initialAddress }: { chain: ChainDef; initi
             tally.json lists the contract. Commit it to the root, on the default branch, then check it below. Doing it before you sign means the record is verified straight away.
           </p>
           <div className="mt-24">
-            <LiveTallySnippet repo={input.repo} chainKey={chain.key} chainId={chain.id} address={input.target} />
+            <LiveTallySnippet repo={input.repo} chainKey={chain.key} chainId={chain.id} address={input.target} signer={account ?? undefined} />
           </div>
         </div>
       )}

@@ -6,7 +6,7 @@ export function SnippetView({ snippet }: { snippet: Snippet }) {
   const entryOnly = snippet.state === "manual";
   return (
     <>
-      <p className={snippet.state === "manual" ? "hint warn" : "hint"}>{snippet.note}</p>
+      <p className={snippet.state === "manual" || snippet.state === "update" ? "hint warn" : "hint"}>{snippet.note}</p>
       <div className="mt-24 stack">
         <pre className="code">{snippet.text}</pre>
         <CopyButton text={snippet.text} label={entryOnly ? "Copy entry" : "Copy tally.json"} />

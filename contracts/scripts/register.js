@@ -96,7 +96,8 @@ async function main() {
   const reg = await registry.getRegistration(target);
   console.log(`Provenance: ${LEVELS[Number(reg.provenance)]}  control-proven & current: ${reg.isControlProven}`);
   console.log(`Repo:       ${reg.githubRepo}`);
-  console.log(`\nNext: add { "chainId": ${chainId}, "address": "${target}" } to tally.json in ${repo}`);
+  console.log(`\nNext: add { "chainId": ${chainId}, "address": "${target}", "signer": "${signer.address}" } to tally.json in ${repo}`);
+  console.log(`      ("signer" is optional; it makes the repository itself name the wallet it authorises.)`);
 }
 
 main().catch((e) => {

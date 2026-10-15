@@ -17,15 +17,17 @@
   const MAX_ENTRIES = 1000;
 
   /**
-   * @returns {Promise<{status: "confirmed"|"not-listed"|"no-file"|"invalid-file"|"invalid-repo"|"unavailable", url?: string, detail?: string}>}
-   *   confirmed     tally.json lists this chain id + address
-   *   not-listed    valid tally.json, but this contract is not in it
-   *   no-file       the repository has no tally.json (HTTP 404)
-   *   invalid-file  tally.json is not valid / too large / wrong version
-   *   invalid-repo  the on-chain repository URL is not a plain github.com repo
-   *   unavailable   could not check (network error, timeout, redirect, 5xx)
+   * @param signer the record's signer; an entry that names a wallet must name this one
+   * @returns {Promise<{status: "confirmed"|"not-listed"|"signer-mismatch"|"no-file"|"invalid-file"|"invalid-repo"|"unavailable", url?: string, detail?: string, bound?: boolean, named?: string}>}
+   *   confirmed        tally.json lists this chain id + address (bound: it also named the signer)
+   *   not-listed       valid tally.json, but this contract is not in it
+   *   signer-mismatch  tally.json lists this contract but names a different wallet
+   *   no-file          the repository has no tally.json (HTTP 404)
+   *   invalid-file     tally.json is not valid / too large / wrong version
+   *   invalid-repo     the on-chain repository URL is not a plain github.com repo
+   *   unavailable      could not check (network error, timeout, redirect, 5xx)
    */
-  async function checkRepoProof({ repoUrl, chainId, address, fetchImpl, timeoutMs }) {
+  async function checkRepoProof({ repoUrl, chainId, address, signer, fetchImpl, timeoutMs }) {
     const parsed = safe.parseGithubRepo(repoUrl);
     if (!parsed) return { status: "invalid-repo" };
     const url = safe.tallyJsonUrl(parsed);
@@ -64,22 +66,49 @@
       return { status: "invalid-file", url, detail: "unexpected shape" };
     }
 
-    const wanted = String(address).toLowerCase();
-    const entries = doc.contracts.slice(0, MAX_ENTRIES);
-    for (const entry of entries) {
-      if (
-        entry &&
-        typeof entry === "object" &&
-        entry.chainId === chainId &&
-        typeof entry.address === "string" &&
-        safe.isAddress(entry.address) &&
-        entry.address.toLowerCase() === wanted
-      ) {
-        return { status: "confirmed", url };
-      }
-    }
-    return { status: "not-listed", url };
+    return Object.assign(judgeEntries(matchEntries(doc.contracts, chainId, address), signer), { url });
   }
 
-  return { MAX_FILE_BYTES, checkRepoProof };
+  const INVALID_SIGNER = "invalid";
+
+  /** What an entry says about the wallet: null for none, "invalid" for a field that is not an address, else the address (lowercase). */
+  function namedSigner(entry) {
+    const value = entry && entry.signer;
+    if (value === undefined || value === null) return null;
+    return typeof value === "string" && safe.isAddress(value) ? value.toLowerCase() : INVALID_SIGNER;
+  }
+
+  /** The wallets named by the entries that list `address` on `chainId` (first MAX_ENTRIES only). */
+  function matchEntries(contracts, chainId, address) {
+    const wanted = String(address).toLowerCase();
+    return contracts
+      .slice(0, MAX_ENTRIES)
+      .filter(
+        (entry) =>
+          entry &&
+          typeof entry === "object" &&
+          entry.chainId === chainId &&
+          typeof entry.address === "string" &&
+          safe.isAddress(entry.address) &&
+          entry.address.toLowerCase() === wanted,
+      )
+      .map(namedSigner);
+  }
+
+  /**
+   * The shared rule (mirrors studio/lib/repo-proof.ts, checked by test-vectors/repo-signer.json):
+   * an entry naming this signer confirms and binds; an entry naming nobody confirms without binding;
+   * if every matching entry names someone else the file disagrees with the record.
+   */
+  function judgeEntries(matches, signer) {
+    if (matches.length === 0) return { status: "not-listed" };
+    if (signer === undefined || signer === null) return { status: "confirmed" };
+    const me = String(signer).toLowerCase();
+    if (matches.includes(me)) return { status: "confirmed", bound: true };
+    if (matches.includes(null)) return { status: "confirmed", bound: false };
+    const named = matches.find((m) => m !== null && m !== INVALID_SIGNER);
+    return named ? { status: "signer-mismatch", named } : { status: "signer-mismatch" };
+  }
+
+  return { MAX_FILE_BYTES, checkRepoProof, matchEntries, judgeEntries };
 });

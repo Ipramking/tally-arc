@@ -1,0 +1,89 @@
+{
+  "$comment": "Shared by studio/test/repo-signer.test.ts and extension/test/repo-signer.test.js so the two implementations of the tally.json wallet rule cannot drift apart. recordSigner: omitted = the default signer below, null = no signer is passed (an old caller), otherwise that wallet.",
+  "chainId": 968,
+  "address": "0x3333333333333333333333333333333333333333",
+  "signer": "0x1111111111111111111111111111111111111111",
+  "cases": [
+    {
+      "name": "no entry at all is not listed",
+      "contracts": [],
+      "expect": { "status": "not-listed" }
+    },
+    {
+      "name": "an entry on another chain does not count",
+      "contracts": [{ "chainId": 5042, "address": "0x3333333333333333333333333333333333333333", "signer": "0x1111111111111111111111111111111111111111" }],
+      "expect": { "status": "not-listed" }
+    },
+    {
+      "name": "an entry for another address does not count",
+      "contracts": [{ "chainId": 968, "address": "0x4444444444444444444444444444444444444444", "signer": "0x1111111111111111111111111111111111111111" }],
+      "expect": { "status": "not-listed" }
+    },
+    {
+      "name": "listed without naming a wallet is accepted, but not bound",
+      "contracts": [{ "chainId": 968, "address": "0x3333333333333333333333333333333333333333" }],
+      "expect": { "status": "confirmed", "bound": false }
+    },
+    {
+      "name": "a null signer counts as naming nobody",
+      "contracts": [{ "chainId": 968, "address": "0x3333333333333333333333333333333333333333", "signer": null }],
+      "expect": { "status": "confirmed", "bound": false }
+    },
+    {
+      "name": "naming the signer confirms and binds",
+      "contracts": [{ "chainId": 968, "address": "0x3333333333333333333333333333333333333333", "signer": "0x1111111111111111111111111111111111111111" }],
+      "expect": { "status": "confirmed", "bound": true }
+    },
+    {
+      "name": "the address case of the contract and of the signer does not matter",
+      "contracts": [{ "chainId": 968, "address": "0x3333333333333333333333333333333333333333", "signer": "0xABCDEFabcdefABCDEFabcdefABCDEFabcdefABCD" }],
+      "recordSigner": "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+      "expect": { "status": "confirmed", "bound": true }
+    },
+    {
+      "name": "naming a different wallet disagrees with the record",
+      "contracts": [{ "chainId": 968, "address": "0x3333333333333333333333333333333333333333", "signer": "0x2222222222222222222222222222222222222222" }],
+      "expect": { "status": "signer-mismatch", "named": "0x2222222222222222222222222222222222222222" }
+    },
+    {
+      "name": "a signer that is not an address fails closed",
+      "contracts": [{ "chainId": 968, "address": "0x3333333333333333333333333333333333333333", "signer": "not-an-address" }],
+      "expect": { "status": "signer-mismatch" }
+    },
+    {
+      "name": "a signer of the wrong type fails closed",
+      "contracts": [{ "chainId": 968, "address": "0x3333333333333333333333333333333333333333", "signer": 7 }],
+      "expect": { "status": "signer-mismatch" }
+    },
+    {
+      "name": "two entries, one names the signer and one another wallet: bound",
+      "contracts": [
+        { "chainId": 968, "address": "0x3333333333333333333333333333333333333333", "signer": "0x2222222222222222222222222222222222222222" },
+        { "chainId": 968, "address": "0x3333333333333333333333333333333333333333", "signer": "0x1111111111111111111111111111111111111111" }
+      ],
+      "expect": { "status": "confirmed", "bound": true }
+    },
+    {
+      "name": "two entries, one names nobody and one another wallet: confirmed, not bound",
+      "contracts": [
+        { "chainId": 968, "address": "0x3333333333333333333333333333333333333333", "signer": "0x2222222222222222222222222222222222222222" },
+        { "chainId": 968, "address": "0x3333333333333333333333333333333333333333" }
+      ],
+      "expect": { "status": "confirmed", "bound": false }
+    },
+    {
+      "name": "two entries that both name other wallets disagree",
+      "contracts": [
+        { "chainId": 968, "address": "0x3333333333333333333333333333333333333333", "signer": "0x2222222222222222222222222222222222222222" },
+        { "chainId": 968, "address": "0x3333333333333333333333333333333333333333", "signer": "0x5555555555555555555555555555555555555555" }
+      ],
+      "expect": { "status": "signer-mismatch", "named": "0x2222222222222222222222222222222222222222" }
+    },
+    {
+      "name": "with no signer to compare (an old caller) the wallet is not enforced",
+      "contracts": [{ "chainId": 968, "address": "0x3333333333333333333333333333333333333333", "signer": "0x2222222222222222222222222222222222222222" }],
+      "recordSigner": null,
+      "expect": { "status": "confirmed" }
+    }
+  ]
+}

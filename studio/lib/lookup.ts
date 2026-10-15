@@ -34,7 +34,7 @@ export async function lookupContract(input: { chain: ChainDef; address: string }
     }
 
     const best = pickBest(records);
-    const repo = best && isLive(best) ? await checkRepoProof({ repoUrl: best.githubRepo, chainId: chain.id, address, ...net }) : null;
+    const repo = best && isLive(best) ? await checkRepoProof({ repoUrl: best.githubRepo, chainId: chain.id, address, signer: best.signer, ...net }) : null;
     let level = decideLevel(best, repo);
     // No record: a wallet has no code, so there is nothing to verify and nothing to register.
     // If the chain cannot say, getCode throws and the answer is "unknown", never "unverified".

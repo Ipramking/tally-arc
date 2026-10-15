@@ -10,6 +10,7 @@ const SR: Record<Row["state"], string> = { ok: "Passed", bad: "Failed", warn: "N
 const REPO_DETAIL: Record<string, string> = {
   confirmed: "tally.json in the repository lists this contract on this network.",
   "not-listed": "tally.json exists, but this contract is not listed in it.",
+  "signer-mismatch": "tally.json lists this contract but names a different wallet than the one that registered it. The repository's owner has to update it, or the wallet it names has to register.",
   "no-file": "The repository has no tally.json at its root.",
   "invalid-file": "tally.json is not valid (wrong shape, wrong version or too large).",
   "invalid-repo": "The repository link recorded on-chain is not a plain GitHub repository, so it was not fetched.",
@@ -52,7 +53,13 @@ export function buildChecklist(result: Extract<Lookup, { ok: true }>): Row[] {
   const repo: Row = !live
     ? { state: "na", title: "Repository lists this contract", detail: "Not checked: the proof above no longer holds." }
     : result.repo?.status === "confirmed"
-      ? { state: "ok", title: "Repository lists this contract", detail: REPO_DETAIL.confirmed }
+      ? {
+          state: "ok",
+          title: "Repository lists this contract",
+          detail: result.repo.bound
+            ? "tally.json lists this contract and names the wallet that registered it, so the repository vouches for that wallet."
+            : `${REPO_DETAIL.confirmed} It names no wallet; naming the signer there makes the proof stronger.`,
+        }
       : {
           state: result.repo?.status === "unavailable" ? "warn" : "bad",
           title: "Repository lists this contract",

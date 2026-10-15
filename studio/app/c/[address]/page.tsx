@@ -87,7 +87,7 @@ export default async function RecordPage({ params, searchParams }: Props) {
   const hasV2 = chain.registries.some((r) => r.version === 2);
   const needsTallyJson = result.ok && registration !== null && isLive(registration) && result.repo?.status !== "confirmed";
   // Merged with what the repository already lists, so adding this contract never drops the others.
-  const snippet = needsTallyJson && registration && registration.registryVersion === 2 ? await buildTallySnippet({ repoUrl: registration.githubRepo, chainId: chain.id, address }) : null;
+  const snippet = needsTallyJson && registration && registration.registryVersion === 2 ? await buildTallySnippet({ repoUrl: registration.githubRepo, chainId: chain.id, address, signer: registration.signer }) : null;
   const badgeUrl = `${STUDIO_URL}/api/badge/${address}?chain=${chain.key}`;
   const registerHref = `/register?address=${address}&chain=${chain.key}`;
   const canRegister = chain.registries.length > 0;
