@@ -99,3 +99,24 @@ the default branch the record can reach **verified**.
 
 If anything is wrong, **do not** try to fix the deployed registry; correct `chains.json` (for example
 remove the bad entry) and deploy another if needed. Clients follow `chains.json`.
+
+## Verify the source on the explorer
+
+Verified source lets anyone read the contract on the explorer and match it to this repository.
+Blockscout explorers, including BOT Chain's Bohr testnet and mainnet, accept it straight from Hardhat:
+
+```bash
+cd contracts
+npx hardhat verify --network botTestnet 0x<registry>
+npx hardhat verify --network botTestnet 0x<demo> 0x<demo owner>   # constructor arguments follow the address
+```
+
+The compiler settings come from `hardhat.config.js` (solc 0.8.24, optimizer at 200 runs, `paris`), so
+they match the deployment exactly. The networks that can be verified this way are listed in
+`VERIFY_API` in that file; add a chain there once its explorer accepts verification. Arc's explorer
+sits behind a bot challenge that a script cannot pass, so Arc contracts are verified through the
+explorer's web form instead.
+
+Example: the Bohr testnet registry, verified at
+https://scan.bohr.life/address/0x5F514879a3B1fD39e47299706031F6D85c8c9C90#code (the explorer shows the
+license as "none" because the plugin does not send the license type).
