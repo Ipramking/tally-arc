@@ -23,9 +23,10 @@ you add to [`chains.json`](chains.json).
 
 | | |
 |---|---|
+| Registry **v2** on Arc mainnet (chain 5042) | [`0xd3F1D46675DE21FD3e15D42214d5C67a77631203`](https://explorer.arc.io/address/0xd3F1D46675DE21FD3e15D42214d5C67a77631203). Deployed 2026-10-15 ([`TallyRegistryV2.sol`](contracts/contracts/TallyRegistryV2.sol)), immutable, no owner. Takes every new registration and is the only registry that can reach **verified**. See [docs/deploy-v2.md](docs/deploy-v2.md). |
 | Registry **v1** on Arc mainnet (chain 5042) | [`0x459Cab32306c439a408cA6b8672CcF6c6A0536d9`](https://explorer.arc.io/address/0x459Cab32306c439a408cA6b8672CcF6c6A0536d9). Deployed and immutable. Still read by every client, capped at **control proven** (it cannot see code changes). |
-| Registry **v2** | Implemented and tested ([`TallyRegistryV2.sol`](contracts/contracts/TallyRegistryV2.sol)). **Not deployed yet**; see [docs/deploy-v2.md](docs/deploy-v2.md). Until it is, nothing can reach **verified**. |
-| Demo contract | [`0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb`](https://explorer.arc.io/address/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb), listed in this repo's [`tally.json`](tally.json) |
+| Registry **v2** on BOT Chain Testnet (Bohr, chain 968) | [`0x5F514879a3B1fD39e47299706031F6D85c8c9C90`](https://scan.bohr.life/address/0x5F514879a3B1fD39e47299706031F6D85c8c9C90#code), source verified on the explorer. |
+| Demo contract | [`0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb`](https://explorer.arc.io/address/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb), registered on v2 and listed in this repo's [`tally.json`](tally.json) |
 | External audit | None yet. See [docs/security.md](docs/security.md) for what has and has not been checked. |
 
 ## Trust levels

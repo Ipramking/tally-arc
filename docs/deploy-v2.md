@@ -1,7 +1,8 @@
 # Deploying registry v2
 
-v2 is implemented and tested but **not deployed**. Deploying needs a wallet, so it is
-done by the repository owner. This guide is the whole procedure.
+v2 is deployed on Arc mainnet (`0xd3F1D46675DE21FD3e15D42214d5C67a77631203`, 2026-10-15) and on
+BOT Chain's Bohr testnet. This guide is the procedure for deploying it on another chain, or
+redeploying it. Deploying needs a wallet, so it is done by the repository owner.
 
 > **Deploying a contract is permanent.** The registry has no owner, no admin key and no
 > upgrade path. If you deploy the wrong thing, you cannot change it; you deploy another
@@ -13,8 +14,10 @@ done by the repository owner. This guide is the whole procedure.
 ## Before you start
 
 - Node 22.12 or newer, and `npm --prefix contracts ci`.
-- A **fresh wallet** holding only what the deployment needs. On Arc, gas is paid in USDC, so a
-  few dollars is plenty.
+- A **fresh wallet** holding only what the deployment needs. On Arc, gas is paid in USDC and the
+  base fee is a flat 20 gwei: the registry deploy uses about 2.22M gas (about 0.045 USDC) and
+  registering a demo about 0.005 USDC. Tools reserve gas at their fee cap (often twice the base
+  fee) before sending, so hold about 0.1 USDC, not just what is spent.
 - `cp contracts/.env.example contracts/.env`, then set `DEPLOYER_PRIVATE_KEY`.
 - `npm test` passes on your machine.
 
@@ -120,3 +123,14 @@ explorer's web form instead.
 Example: the Bohr testnet registry, verified at
 https://scan.bohr.life/address/0x5F514879a3B1fD39e47299706031F6D85c8c9C90#code (the explorer shows the
 license as "none" because the plugin does not send the license type).
+
+## Deployments
+
+| Chain | What | Address | Transaction |
+|---|---|---|---|
+| Arc mainnet (5042) | Registry v2 | `0xd3F1D46675DE21FD3e15D42214d5C67a77631203` | `0x546011b15c995015236464463b0bc9a94112b9ad496d5c44a151cc8a8a62d028` (block 26165146) |
+| Arc mainnet (5042) | Demo `0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb` registered on v2 | | `0x7af97de860047bddf18d4614e93e10c0857bf6efe938a3e49d6565b0d0d07093` (block 26165189) |
+| Bohr testnet (968) | Registry v2 | `0x5F514879a3B1fD39e47299706031F6D85c8c9C90` | source verified on scan.bohr.life |
+
+On Arc, the deployer and the demo's owner are the same wallet, `0xB2Cd6331395DED6747b9e94b736b8C7edC0947B5`,
+which is the `signer` that `tally.json` names for the demo.

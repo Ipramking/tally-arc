@@ -3,12 +3,12 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { JSDOM } = require("jsdom");
-const { root, chains, lib, encodeV1, encodeAddressWord, fakeWorld, tallyJson, TARGET, SIGNER } = require("./helpers");
+const { root, chains, arc, lib, registryRpc, v1Registry, encodeV1, encodeAddressWord, fakeWorld, tallyJson, TARGET, SIGNER } = require("./helpers");
 
 const registry = lib("registry.js");
 const HTML = fs.readFileSync(path.join(root, "popup/popup.html"), "utf8");
 const SCRIPTS = ["chains.generated.js", "lib/net.js", "lib/safe-url.js", "lib/registry.js", "lib/repo-proof.js", "lib/status.js", "lib/lookup.js", "popup/popup.js"].map((f) => fs.readFileSync(path.join(root, f), "utf8"));
-const REG_V1 = chains.chains[0].registries[0].address.toLowerCase();
+const REG_V1 = v1Registry(arc);
 const FILE = "https://raw.githubusercontent.com/acme/vault/HEAD/tally.json";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -28,8 +28,10 @@ function open(fetchImpl, { url = "chrome-extension://tally/popup/popup.html", pr
   return { window: dom.window, document: dom.window.document, $, check };
 }
 
-const world = (extra = {}) =>
-  fakeWorld({ rpc: { [REG_V1]: { [registry.GET_REGISTRATION]: encodeV1({ repo: "", owner: "0x0000000000000000000000000000000000000000", at: 0n, prov: 0 }) } }, ...extra });
+// Every registry the chain table lists answers "no record" unless a test says otherwise, so these
+// tests keep working when chains.json lists a newer registry.
+const rpcWith = (answers = {}) => registryRpc(arc, registry.GET_REGISTRATION, answers);
+const world = (extra = {}) => fakeWorld({ rpc: rpcWith(), ...extra });
 
 test("lists the configured chains and shows presets only where they exist", () => {
   const { $, document } = open(world());
@@ -102,7 +104,7 @@ test("a wallet is called a wallet, with no register link", async () => {
 test("a live v1 owner shows 'Control proven' with the canonical repo link", async () => {
   const fetchImpl = fakeWorld({
     rpc: {
-      [REG_V1]: { [registry.GET_REGISTRATION]: encodeV1({ repo: "https://github.com/acme/vault/tree/main", hash: "abc123" }) },
+      ...rpcWith({ [REG_V1]: encodeV1({ repo: "https://github.com/acme/vault/tree/main", hash: "abc123" }) }),
       [TARGET.toLowerCase()]: { [registry.OWNER]: encodeAddressWord(SIGNER) },
     },
     files: { [FILE]: tallyJson({ chainId: 5042, address: TARGET }) },
@@ -121,7 +123,7 @@ test("a live v1 owner shows 'Control proven' with the canonical repo link", asyn
 test("hostile on-chain strings are shown as text and never linked or parsed", async () => {
   const fetchImpl = fakeWorld({
     rpc: {
-      [REG_V1]: { [registry.GET_REGISTRATION]: encodeV1({ repo: "javascript:alert(1)", hash: "<img src=x onerror=alert(1)>" }) },
+      ...rpcWith({ [REG_V1]: encodeV1({ repo: "javascript:alert(1)", hash: "<img src=x onerror=alert(1)>" }) }),
       [TARGET.toLowerCase()]: { [registry.OWNER]: encodeAddressWord(SIGNER) },
     },
   });
@@ -136,7 +138,7 @@ test("hostile on-chain strings are shown as text and never linked or parsed", as
 });
 
 test("an RPC failure says so instead of claiming the contract is unverified", async () => {
-  const failing = fakeWorld({ rpc: { [REG_V1]: { [registry.GET_REGISTRATION]: new TypeError("network down") } } });
+  const failing = fakeWorld({ rpc: rpcWith({ [REG_V1]: new TypeError("network down") }) });
   const { $, check } = open(failing);
   await check(TARGET);
   const box = $("result");

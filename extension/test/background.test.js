@@ -1,19 +1,21 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("node:path");
-const { root, lib, chains, encodeV1, encodeV2, fakeWorld, tallyJson, TARGET } = require("./helpers");
+const { root, lib, chains, arc, registryRpc, v1Registry, encodeV1, encodeV2, fakeWorld, tallyJson, TARGET } = require("./helpers");
 
 for (const name of ["net.js", "safe-url.js", "registry.js", "repo-proof.js", "status.js", "lookup.js"]) lib(name);
 const registry = lib("registry.js");
 const background = require(path.join(root, "background.js"));
 
-const REG_V1 = chains.chains[0].registries[0].address.toLowerCase();
+const REG_V1 = v1Registry(arc);
 const sel = registry.GET_REGISTRATION;
 const FILE = "https://raw.githubusercontent.com/acme/vault/HEAD/tally.json";
 const fromArc = { id: "tally-extension", url: `https://explorer.arc.io/address/${TARGET}` };
-const noRecord = () => encodeV1({ repo: "", owner: "0x0000000000000000000000000000000000000000", at: 0n, prov: 0 });
 const lookupMsg = (address = TARGET, extra = {}) => ({ type: "tally:lookup", address, ...extra });
-const registered = () => fakeWorld({ rpc: { [REG_V1]: { [sel]: noRecord() } } });
+// Every registry the chain table lists answers "no record" unless a test says otherwise, so these
+// tests keep working when chains.json lists a newer registry.
+const rpcWith = (answers = {}) => registryRpc(arc, sel, answers);
+const registered = () => fakeWorld({ rpc: rpcWith() });
 
 test.beforeEach(() => background.cache.clear());
 
@@ -39,7 +41,7 @@ test("an unregistered contract points the badge at its record page, never the re
 
 test("a registered contract points the badge at its record page", async () => {
   const world = fakeWorld({
-    rpc: { [REG_V1]: { [sel]: encodeV1({ repo: "https://github.com/acme/vault", prov: 1 }) } },
+    rpc: rpcWith({ [REG_V1]: encodeV1({ repo: "https://github.com/acme/vault", prov: 1 }) }),
   });
   const result = await background.handleLookup(lookupMsg(), fromArc, world);
   assert.equal(result.level, "self-attested");
@@ -56,7 +58,7 @@ test("the chain comes from the sender's page, never from the message", async () 
 });
 
 test("RPC failure becomes an 'unknown' answer with an honest sentence", async () => {
-  const world = fakeWorld({ rpc: { [REG_V1]: { [sel]: new TypeError("network down") } } });
+  const world = fakeWorld({ rpc: rpcWith({ [REG_V1]: new TypeError("network down") }) });
   const result = await background.handleLookup(lookupMsg(), fromArc, world);
   assert.equal(result.ok, false);
   assert.equal(result.level, "unknown");
@@ -80,7 +82,7 @@ test("successful answers expire after about a minute, failures after seconds", a
   assert.ok(ttl > 55_000 && ttl <= 60_000, `ok ttl ${ttl}`);
 
   background.cache.clear();
-  const failing = fakeWorld({ rpc: { [REG_V1]: { [sel]: new TypeError("down") } } });
+  const failing = fakeWorld({ rpc: rpcWith({ [REG_V1]: new TypeError("down") }) });
   await background.handleLookup(lookupMsg(), fromArc, failing);
   await new Promise((r) => setTimeout(r, 5));
   const failed = [...background.cache.values()][0];

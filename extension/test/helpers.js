@@ -38,6 +38,30 @@ function encodeV2({ repo = REPO, hash = "", signer = SIGNER, at = 1700000000n, p
 const word = (hexNoPrefix) => hexNoPrefix.padStart(64, "0");
 const encodeAddressWord = (address) => "0x" + word(address.slice(2).toLowerCase());
 
+/** An empty "nothing registered" answer, laid out the way the given registry version returns it. */
+const encodeNone = (version) =>
+  version === 1
+    ? encodeV1({ repo: "", owner: ZERO, at: 0n, prov: 0 })
+    : encodeV2({ repo: "", signer: ZERO, at: 0n, prov: 0, method: 0, flags: 0 });
+
+/**
+ * RPC answers for every registry the shipped chain table lists for `chain`: all "no record", except
+ * those in `answers` (keyed by address, value = the getRegistration reply or an Error). Tests that
+ * are not about registry order use this, so listing a newer registry in chains.json cannot break them.
+ */
+function registryRpc(chain, selector, answers = {}) {
+  const given = Object.fromEntries(Object.entries(answers).map(([k, v]) => [k.toLowerCase(), v]));
+  const rpc = {};
+  for (const { version, address } of chain.registries) {
+    const key = address.toLowerCase();
+    rpc[key] = { [selector]: key in given ? given[key] : encodeNone(version) };
+  }
+  return rpc;
+}
+
+/** The legacy v1 registry listed for a chain (lowercase), whatever else is listed above it. */
+const v1Registry = (chain) => chain.registries.find((r) => r.version === 1).address.toLowerCase();
+
 /** A Response-like object from text (uses the real Response class from Node). */
 const textResponse = (body, init = {}) => new Response(body, { status: 200, ...init });
 
@@ -91,5 +115,5 @@ const tallyJson = (...contracts) => JSON.stringify({ version: 1, contracts });
 
 module.exports = {
   root, lib, chains, arc, vectors, ZERO, SIGNER, TARGET, REPO,
-  encodeV1, encodeV2, encodeAddressWord, textResponse, fakeFetch, fakeWorld, tallyJson,
+  encodeV1, encodeV2, encodeNone, encodeAddressWord, registryRpc, v1Registry, textResponse, fakeFetch, fakeWorld, tallyJson,
 };

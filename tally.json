@@ -1,7 +1,7 @@
 {
   "version": 1,
   "contracts": [
-    { "chainId": 5042, "address": "0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb" },
+    { "chainId": 5042, "address": "0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb", "signer": "0xB2Cd6331395DED6747b9e94b736b8C7edC0947B5" },
     { "chainId": 968, "address": "0xEC84A560DF15cCb86d96c86Bb61d8CEB1c744452", "signer": "0x4e01A5C636d9646c341097655904C669703e52a6" }
   ]
 }

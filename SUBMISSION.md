@@ -13,6 +13,7 @@ Contract provenance you can check. Know the code before you sign.
 
 ## Links
 - Studio: https://tally-studio.vercel.app
+- Registry v2 on Arc mainnet: https://explorer.arc.io/address/0xd3F1D46675DE21FD3e15D42214d5C67a77631203
 - Registry v1 on Arc mainnet: https://explorer.arc.io/address/0x459Cab32306c439a408cA6b8672CcF6c6A0536d9
 - Demo contract and its record: https://tally-studio.vercel.app/c/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb
 - Public repo: https://github.com/Ipramking/tally-arc
@@ -33,15 +34,16 @@ Three surfaces share one decision rule:
 - A Manifest V3 Chrome extension that tags addresses on the block explorer.
 - A Next.js studio with a one-signature EIP-712 register flow, record pages that show the
   evidence behind every level, and a live SVG badge for READMEs.
-- `TallyRegistryV2.sol` (EIP-712, ERC-1271, code-hash tracking, no owner and no upgrade
-  path), alongside the original `TallyRegistry.sol` that is deployed on Arc mainnet.
+- `TallyRegistryV2.sol` (EIP-712, ERC-1271, code-hash tracking, append-only history, no owner
+  and no upgrade path), deployed on Arc mainnet alongside the original `TallyRegistry.sol`.
 
 ## How it uses Arc
 Arc settles gas in native USDC, so a single malicious approval or contract call costs real
 dollars. Tally puts a trust signal in front of the user at exactly that moment.
 
 On Arc mainnet (chain ID 5042):
-- The v1 registry is deployed and read live by every client.
+- The v2 registry takes new registrations and the v1 registry is still read; both are deployed
+  and read live by every client.
 - Registrations are transactions paid in Arc's native USDC gas, and the EIP-712 signing domain
   is bound to the chain and the registry address.
 - The extension and the badge API read Arc state directly over its public RPC. Networks and
@@ -59,17 +61,18 @@ On Arc mainnet (chain ID 5042):
 - Clients treat every registry and repository string as hostile input: strict link parsing,
   text-only rendering, a nonce-based Content-Security-Policy, and a failure to read the chain
   shows "unavailable" rather than a misleading "unverified".
-- Honest status: v2 is implemented and tested but not yet deployed, and has not had an external
+- Honest status: v2 is deployed on Arc mainnet (and on BOT Chain's Bohr testnet) but has not had an external
   audit.
 
 ## What's next
-- Deploy v2 and run an external audit before real value depends on it.
+- Run an external audit before real value depends on it.
 - A hosted, gasless relayer so users register with a signature and zero gas.
 - CI auto-registration on release tags, binding a release to its source at ship time.
 - Reproducible-build verification, so "verified" can eventually say the source compiles to the
   deployed bytecode.
 
 ## On-chain addresses (Arc mainnet, chain 5042)
+- Registry v2: `0xd3F1D46675DE21FD3e15D42214d5C67a77631203`
 - Registry v1: `0x459Cab32306c439a408cA6b8672CcF6c6A0536d9`
 - Demo contract: `0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb`
 

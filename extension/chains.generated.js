@@ -21,6 +21,10 @@
         },
         "registries": [
           {
+            "version": 2,
+            "address": "0xd3F1D46675DE21FD3e15D42214d5C67a77631203"
+          },
+          {
             "version": 1,
             "address": "0x459Cab32306c439a408cA6b8672CcF6c6A0536d9"
           }
