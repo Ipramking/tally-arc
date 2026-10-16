@@ -24,6 +24,9 @@ verified contract, and [docs/adding-a-chain.md](docs/adding-a-chain.md) shows ho
 
 **Studio:** https://tally-studio.vercel.app
 
+**Start here:** [docs/getting-started.md](docs/getting-started.md) takes a team from nothing to Tally Verified, shows how to check and
+show the answer, and says what a chain needs to be supported.
+
 ## Status
 
 | | |
@@ -57,10 +60,11 @@ what you see is what the chain supports.
 | [`action.yml`](action.yml) | A GitHub Action that runs `tally-verify`: it fails the build when `tally.json` and the on-chain records disagree |
 | [`chains.json`](chains.json) | The single source of truth for networks and registry addresses |
 | [`tally.json`](tally.json) | This repository's own provenance file (see below) |
-| [`docs/`](docs) | [Integrating Tally](docs/integrating.md), [publishing the extension](docs/chrome-web-store.md), [security model](docs/security.md), [networks](docs/networks.md), [deploying a registry](docs/deploy-v2.md), [adding a chain](docs/adding-a-chain.md) |
+| [`docs/`](docs) | [Getting started](docs/getting-started.md), [integrating Tally](docs/integrating.md), [publishing the extension](docs/chrome-web-store.md), [security model](docs/security.md), [networks](docs/networks.md), [deploying a registry](docs/deploy-v2.md), [adding a chain](docs/adding-a-chain.md) |
 | [`scripts/`](scripts) | `sync-chains.mjs`, which generates the studio and extension config and the network list from `chains.json`, and `check-neutral.mjs`, which keeps source code free of network-specific names |
 | [`test-vectors/`](test-vectors) | Decision-rule vectors shared by the studio and extension tests, so both apply the same trust rules |
 | [`brand/`](brand) | Logo, icon and colour tokens (SVG and PNG) |
+| [`SUPPORT.md`](SUPPORT.md), [`CONTRIBUTING.md`](CONTRIBUTING.md), [`SECURITY.md`](SECURITY.md) | Where to ask, how to contribute and what CI enforces, and how to report a vulnerability |
 | [`SUBMISSION.md`](SUBMISSION.md) | The text of this project's Arc Microgrants application |
 
 ## Using Tally

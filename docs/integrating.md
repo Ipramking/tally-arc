@@ -1,5 +1,7 @@
 # Integrating Tally
 
+New to Tally? [getting-started.md](getting-started.md) is the short, ordered path; this page is the reference.
+
 Tally answers one question about a deployed contract: *has anyone put their name to its source, and does
 the evidence hold up right now?* This page is for four kinds of reader: people checking a contract,
 teams registering one, products that want to show the answer, and chains that want to be supported.
