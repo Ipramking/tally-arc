@@ -4,6 +4,10 @@ Ask whether a smart contract's source is vouched for, on any EVM chain, and fail
 `tally.json` and the chain disagree. This is the [Tally](https://tally-studio.vercel.app) lookup code the studio and
 the browser extension run, as a package.
 
+```
+npm install tally-provenance
+```
+
 No runtime dependencies. Node 20 or newer (it uses the global `fetch`).
 
 ## Look a contract up

@@ -116,8 +116,7 @@ demo contract on Arc:
 ### Use the library
 
 [`sdk/`](../sdk) is `tally-provenance`: the same lookup code the studio's rules are tested against, dependency-free
-and typed, for Node 20+ and bundlers. It is ready to publish and **not on npm yet**; from a checkout of this
-repository, `require("./sdk")` works.
+and typed, for Node 20+ and bundlers: `npm install tally-provenance`.
 
 ```js
 const { lookup, getChain } = require("tally-provenance");

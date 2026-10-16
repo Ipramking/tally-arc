@@ -53,7 +53,7 @@ what you see is what the chain supports.
 | [`contracts/`](contracts) | `TallyRegistryV2.sol` (EIP-712, ERC-1271, code-hash tracking), the original `TallyRegistry.sol` (v1, deployed, untouched), Hardhat tests, deploy and register scripts |
 | [`studio/`](studio) | Next.js app: record pages with the evidence behind every level, the register flow, a live SVG badge API |
 | [`extension/`](extension) | Manifest V3 Chrome extension: badges on the block explorer and a lookup popup |
-| [`sdk/`](sdk) | `tally-provenance`: the lookup library and the `tally-verify` command, for other packages and for CI (not yet published to npm) |
+| [`sdk/`](sdk) | `tally-provenance`: the lookup library and the `tally-verify` command, for other packages and for CI (`npm install tally-provenance`) |
 | [`action.yml`](action.yml) | A GitHub Action that runs `tally-verify`: it fails the build when `tally.json` and the on-chain records disagree |
 | [`chains.json`](chains.json) | The single source of truth for networks and registry addresses |
 | [`tally.json`](tally.json) | This repository's own provenance file (see below) |
