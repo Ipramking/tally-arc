@@ -1,0 +1,24 @@
+name: Tally records
+
+# This repository uses its own action on its own tally.json: every contract it lists must still have an
+# on-chain record that names this repository and the listed wallet. Weekly, so a record that went stale
+# or a registry that stopped answering shows up without anyone pushing.
+on:
+  push:
+    branches: [master]
+    paths: [tally.json, chains.json, action.yml, "sdk/**", "extension/lib/**"]
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: tally.json agrees with the chain
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./

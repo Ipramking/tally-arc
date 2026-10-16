@@ -1,0 +1,40 @@
+name: Tally verify
+description: Fail the build when a repository's tally.json and the on-chain Tally records disagree.
+author: Tally
+branding:
+  icon: shield
+  color: green
+
+inputs:
+  file:
+    description: Path to the tally.json to check.
+    default: tally.json
+  repository:
+    description: 'owner/name the on-chain records must name. Use "none" to skip that check.'
+    default: ${{ github.repository }}
+  strict:
+    description: 'Set to "true" to count warnings (an upgradeable proxy, a legacy registry, a self-attested record) as failures.'
+    default: "false"
+  chains:
+    description: Path to a JSON chain table for networks the bundled one does not list.
+    default: ""
+  timeout:
+    description: Per-request timeout in milliseconds.
+    default: "15000"
+
+runs:
+  using: composite
+  steps:
+    - name: Check tally.json against the chain
+      shell: bash
+      env:
+        TALLY_FILE: ${{ inputs.file }}
+        TALLY_REPOSITORY: ${{ inputs.repository }}
+        TALLY_STRICT: ${{ inputs.strict }}
+        TALLY_CHAINS: ${{ inputs.chains }}
+        TALLY_TIMEOUT: ${{ inputs.timeout }}
+      run: |
+        args=(--file "$TALLY_FILE" --repository "$TALLY_REPOSITORY" --timeout "$TALLY_TIMEOUT")
+        if [ "$TALLY_STRICT" = "true" ]; then args+=(--strict); fi
+        if [ -n "$TALLY_CHAINS" ]; then args+=(--chains "$TALLY_CHAINS"); fi
+        node "${{ github.action_path }}/sdk/bin/tally-verify.mjs" "${args[@]}"

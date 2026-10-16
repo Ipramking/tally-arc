@@ -169,6 +169,22 @@ test("a hostile on-chain repo string never reaches a request or a link", async (
   assert.equal(world.calls.filter((c) => c.url.includes("raw.githubusercontent")).length, 0);
 });
 
+test("a caller can judge the repository itself: nothing is fetched and the supplied check decides", async () => {
+  const world = fakeWorld({ rpc: rpcFor({ [REG_V2]: { [sel]: encodeV2() }, [REG_V1]: { [sel]: none(1) } }), files: {} });
+  const seen = [];
+  const supplied = async (record) => {
+    seen.push(record.signer);
+    return { status: "confirmed", bound: true, url: "tally.json" };
+  };
+  const result = await lookup({ chain: both, address: TARGET, fetchImpl: world, repoCheck: supplied });
+  assert.equal(result.level, "verified");
+  assert.deepEqual(seen, [SIGNER], "it is handed the record it must judge");
+  assert.equal(world.calls.filter((c) => c.url.includes("raw.githubusercontent")).length, 0);
+
+  const unbound = await lookup({ chain: both, address: TARGET, fetchImpl: world, repoCheck: async () => ({ status: "confirmed", bound: false }) });
+  assert.equal(unbound.level, "control-proven");
+});
+
 // ---- what "verified" requires: a named wallet, no proxy, and a deployer that still speaks for the contract
 
 const IMPL_WORD = encodeAddressWord("0x5555555555555555555555555555555555555555");

@@ -1,0 +1,24 @@
+{
+  "name": "tally-provenance",
+  "version": "0.1.0",
+  "description": "Ask whether a smart contract's source is vouched for, on any EVM chain. A Tally lookup library and a CI check that tally.json agrees with the chain.",
+  "license": "MIT",
+  "keywords": ["tally", "provenance", "smart-contracts", "evm", "verification", "ci", "supply-chain"],
+  "homepage": "https://tally-studio.vercel.app",
+  "repository": { "type": "git", "url": "git+https://github.com/Ipramking/tally-arc.git", "directory": "sdk" },
+  "engines": { "node": ">=20" },
+  "main": "index.js",
+  "module": "index.mjs",
+  "types": "index.d.ts",
+  "exports": {
+    ".": { "types": "./index.d.ts", "import": "./index.mjs", "require": "./index.js" },
+    "./package.json": "./package.json"
+  },
+  "bin": { "tally-verify": "bin/tally-verify.mjs" },
+  "files": ["index.js", "index.mjs", "index.d.ts", "paths.js", "verify.js", "cli.js", "bin", "lib", "chains.js", "LICENSE", "README.md"],
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "prepack": "node scripts/build.mjs",
+    "postpack": "node scripts/build.mjs --clean"
+  }
+}

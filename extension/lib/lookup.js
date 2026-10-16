@@ -13,11 +13,12 @@
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function (registry, repoProof, status, safe) {
   /**
+   * @param repoCheck optional async (record) => {status, bound?, ...}; replaces the fetch of the repository's tally.json
    * @returns {Promise<{ok: true, level: string, registration: object|null, repo: object|null, repoLink: string|null}
    *                 | {ok: false, level: "unknown", error: string}>}
    * Never throws for network or decoding failures; those become level "unknown".
    */
-  async function lookup({ chain, address, fetchImpl, timeoutMs }) {
+  async function lookup({ chain, address, fetchImpl, timeoutMs, repoCheck }) {
     if (!safe.isAddress(address)) return { ok: false, level: "unknown", error: "invalid address" };
     if (!chain.registries.length) return { ok: false, level: "unknown", error: "no registry deployed on " + chain.name };
 
@@ -49,7 +50,11 @@
       }
       let repo = null;
       if (best && status.isLive(best)) {
-        repo = await repoProof.checkRepoProof({ repoUrl: best.githubRepo, chainId: chain.id, address, signer: best.signer, fetchImpl, timeoutMs });
+        // `repoCheck(record)` lets a caller that already holds the repository's tally.json (a CI job
+        // checking its own checkout) judge it locally instead of fetching it from GitHub.
+        repo = repoCheck
+          ? await repoCheck(best)
+          : await repoProof.checkRepoProof({ repoUrl: best.githubRepo, chainId: chain.id, address, signer: best.signer, fetchImpl, timeoutMs });
       }
       let level = status.decideLevel(best, repo);
       // No record: a wallet has no code, so there is nothing to verify and nothing to register.

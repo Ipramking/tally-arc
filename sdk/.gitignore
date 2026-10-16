@@ -1,0 +1,5 @@
+# Copied in at pack time by scripts/build.mjs; the extension is the single source.
+lib/
+chains.js
+LICENSE
+*.tgz

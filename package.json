@@ -11,6 +11,7 @@
     "test:contracts": "npm --prefix contracts test",
     "test:studio": "npm --prefix studio test",
     "test:extension": "npm --prefix extension test",
-    "test": "npm run chains:check && npm run neutral:check && npm run test:contracts && npm run test:studio && npm run test:extension"
+    "test:sdk": "npm --prefix sdk test",
+    "test": "npm run chains:check && npm run neutral:check && npm run test:contracts && npm run test:studio && npm run test:extension && npm run test:sdk"
   }
 }

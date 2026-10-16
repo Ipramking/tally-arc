@@ -53,6 +53,8 @@ what you see is what the chain supports.
 | [`contracts/`](contracts) | `TallyRegistryV2.sol` (EIP-712, ERC-1271, code-hash tracking), the original `TallyRegistry.sol` (v1, deployed, untouched), Hardhat tests, deploy and register scripts |
 | [`studio/`](studio) | Next.js app: record pages with the evidence behind every level, the register flow, a live SVG badge API |
 | [`extension/`](extension) | Manifest V3 Chrome extension: badges on the block explorer and a lookup popup |
+| [`sdk/`](sdk) | `tally-provenance`: the lookup library and the `tally-verify` command, for other packages and for CI (not yet published to npm) |
+| [`action.yml`](action.yml) | A GitHub Action that runs `tally-verify`: it fails the build when `tally.json` and the on-chain records disagree |
 | [`chains.json`](chains.json) | The single source of truth for networks and registry addresses |
 | [`tally.json`](tally.json) | This repository's own provenance file (see below) |
 | [`docs/`](docs) | [Integrating Tally](docs/integrating.md), [security model](docs/security.md), [networks](docs/networks.md), [deploying a registry](docs/deploy-v2.md), [adding a chain](docs/adding-a-chain.md) |
@@ -118,6 +120,7 @@ npm --prefix studio run dev   # http://localhost:3000
 | Contracts | `npm run test:contracts` | v2 behaviour, hostile targets, v1 limitations pinned, and that the studio's ABIs and EIP-712 types match the real contracts |
 | Studio | `npm run test:studio` | trust-level logic, registry decoding, hardened RPC, repository proof, register flow, badge, CSP |
 | Extension | `npm run test:extension` | the same shared test vectors, service worker, content script, popup, manifest rules |
+| SDK | `npm run test:sdk` | the `tally.json` check and its exit codes, the command line, the public API and its types |
 
 The studio also has `npm run typecheck`, `npm run lint` and `npm run build`; all of it
 runs in [CI](.github/workflows/ci.yml).
