@@ -131,6 +131,14 @@ license as "none" because the plugin does not send the license type).
 | Arc mainnet (5042) | Registry v2 | `0xd3F1D46675DE21FD3e15D42214d5C67a77631203` | `0x546011b15c995015236464463b0bc9a94112b9ad496d5c44a151cc8a8a62d028` (block 26165146) |
 | Arc mainnet (5042) | Demo `0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb` registered on v2 | | `0x7af97de860047bddf18d4614e93e10c0857bf6efe938a3e49d6565b0d0d07093` (block 26165189) |
 | Bohr testnet (968) | Registry v2 | `0x5F514879a3B1fD39e47299706031F6D85c8c9C90` | source verified on scan.bohr.life |
+| Bohr testnet (968) | Example: EIP-1967 proxy, owner-proven `0x42144a33b26D08cbFB68cF205AAdE3430eAde600` | | `0x40380588dab24e3a296f7fc13f1911e0fa71221cd08c4b842fa73cb9dde9b937` |
+| Bohr testnet (968) | Example: deployer record, then handed to another owner `0x636B032623Fc41c001759fB7abD368Cb1566C9A7` | | `0x5d10f49539ff9948e738c70c503ea7ac930c487f11791340dfde49977321da15` |
 
 On Arc, the deployer and the demo's owner are the same wallet, `0xB2Cd6331395DED6747b9e94b736b8C7edC0947B5`,
 which is the `signer` that `tally.json` names for the demo.
+
+The two Bohr examples are synthetic contracts that show where the registry says more than the clients
+will. The registry reports both as fully "control current" with unchanged code; Tally reads the first
+as **control proven** (an upgradeable proxy is never verified) and the second as **stale** (its deployer
+no longer owns it). They are registered under a path inside this repository on purpose and are not
+listed in `tally.json`.
