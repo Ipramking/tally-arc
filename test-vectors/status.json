@@ -1,5 +1,5 @@
 {
-  "_comment": "Shared by studio/test and extension/test. Registration objects carry only the fields decideLevel reads.",
+  "_comment": "Shared by studio/test and extension/test. Registration objects carry only the fields decideLevel reads. upgradeable is set by the lookup (proxy probe), controlCurrent for a deployer record is lowered by the lookup when the contract names another owner; repo.bound says whether the confirming tally.json entry named the signer's wallet.",
   "decideLevel": [
     {
       "name": "no record",
@@ -13,7 +13,8 @@
         "provenance": "NONE",
         "registryVersion": 2,
         "controlCurrent": false,
-        "codeCurrent": false
+        "codeCurrent": false,
+        "upgradeable": null
       },
       "repo": null,
       "expected": "unverified"
@@ -24,7 +25,8 @@
         "provenance": "SELF_ATTESTED",
         "registryVersion": 2,
         "controlCurrent": false,
-        "codeCurrent": true
+        "codeCurrent": true,
+        "upgradeable": null
       },
       "repo": null,
       "expected": "self-attested"
@@ -35,7 +37,8 @@
         "provenance": "SELF_ATTESTED",
         "registryVersion": 1,
         "controlCurrent": null,
-        "codeCurrent": null
+        "codeCurrent": null,
+        "upgradeable": null
       },
       "repo": null,
       "expected": "self-attested"
@@ -46,10 +49,12 @@
         "provenance": "SELF_ATTESTED",
         "registryVersion": 2,
         "controlCurrent": false,
-        "codeCurrent": true
+        "codeCurrent": true,
+        "upgradeable": null
       },
       "repo": {
-        "status": "confirmed"
+        "status": "confirmed",
+        "bound": true
       },
       "expected": "self-attested"
     },
@@ -59,12 +64,103 @@
         "provenance": "CONTROL_PROVEN",
         "registryVersion": 2,
         "controlCurrent": true,
-        "codeCurrent": true
+        "codeCurrent": true,
+        "upgradeable": false
+      },
+      "repo": {
+        "status": "confirmed",
+        "bound": true
+      },
+      "expected": "verified"
+    },
+    {
+      "name": "v2 live, repo lists it but names no wallet: the repository vouches for the address, not for the signer",
+      "registration": {
+        "provenance": "CONTROL_PROVEN",
+        "registryVersion": 2,
+        "controlCurrent": true,
+        "codeCurrent": true,
+        "upgradeable": false
+      },
+      "repo": {
+        "status": "confirmed",
+        "bound": false
+      },
+      "expected": "control-proven"
+    },
+    {
+      "name": "v2 live, confirmed without a bound flag is not bound",
+      "registration": {
+        "provenance": "CONTROL_PROVEN",
+        "registryVersion": 2,
+        "controlCurrent": true,
+        "codeCurrent": true,
+        "upgradeable": false
       },
       "repo": {
         "status": "confirmed"
       },
-      "expected": "verified"
+      "expected": "control-proven"
+    },
+    {
+      "name": "v2 live, repo confirms and binds, but the contract is an upgradeable proxy",
+      "registration": {
+        "provenance": "CONTROL_PROVEN",
+        "registryVersion": 2,
+        "controlCurrent": true,
+        "codeCurrent": true,
+        "upgradeable": true
+      },
+      "repo": {
+        "status": "confirmed",
+        "bound": true
+      },
+      "expected": "control-proven"
+    },
+    {
+      "name": "v2 live, proxy probe never ran (null): nothing is rounded up",
+      "registration": {
+        "provenance": "CONTROL_PROVEN",
+        "registryVersion": 2,
+        "controlCurrent": true,
+        "codeCurrent": true,
+        "upgradeable": null
+      },
+      "repo": {
+        "status": "confirmed",
+        "bound": true
+      },
+      "expected": "control-proven"
+    },
+    {
+      "name": "v2 proxy whose signer lost control is stale, not control-proven",
+      "registration": {
+        "provenance": "CONTROL_PROVEN",
+        "registryVersion": 2,
+        "controlCurrent": false,
+        "codeCurrent": true,
+        "upgradeable": true
+      },
+      "repo": {
+        "status": "confirmed",
+        "bound": true
+      },
+      "expected": "stale"
+    },
+    {
+      "name": "v2 deployer record whose contract now has another owner (controlCurrent set false by the lookup) is stale",
+      "registration": {
+        "provenance": "CONTROL_PROVEN",
+        "registryVersion": 2,
+        "controlCurrent": false,
+        "codeCurrent": true,
+        "upgradeable": false
+      },
+      "repo": {
+        "status": "confirmed",
+        "bound": true
+      },
+      "expected": "stale"
     },
     {
       "name": "v2 live, repo does not list it",
@@ -72,7 +168,8 @@
         "provenance": "CONTROL_PROVEN",
         "registryVersion": 2,
         "controlCurrent": true,
-        "codeCurrent": true
+        "codeCurrent": true,
+        "upgradeable": false
       },
       "repo": {
         "status": "not-listed"
@@ -85,7 +182,8 @@
         "provenance": "CONTROL_PROVEN",
         "registryVersion": 2,
         "controlCurrent": true,
-        "codeCurrent": true
+        "codeCurrent": true,
+        "upgradeable": false
       },
       "repo": {
         "status": "no-file"
@@ -98,7 +196,8 @@
         "provenance": "CONTROL_PROVEN",
         "registryVersion": 2,
         "controlCurrent": true,
-        "codeCurrent": true
+        "codeCurrent": true,
+        "upgradeable": false
       },
       "repo": {
         "status": "invalid-file"
@@ -111,7 +210,8 @@
         "provenance": "CONTROL_PROVEN",
         "registryVersion": 2,
         "controlCurrent": true,
-        "codeCurrent": true
+        "codeCurrent": true,
+        "upgradeable": false
       },
       "repo": {
         "status": "invalid-repo"
@@ -124,7 +224,8 @@
         "provenance": "CONTROL_PROVEN",
         "registryVersion": 2,
         "controlCurrent": true,
-        "codeCurrent": true
+        "codeCurrent": true,
+        "upgradeable": false
       },
       "repo": {
         "status": "unavailable"
@@ -137,7 +238,8 @@
         "provenance": "CONTROL_PROVEN",
         "registryVersion": 2,
         "controlCurrent": true,
-        "codeCurrent": true
+        "codeCurrent": true,
+        "upgradeable": false
       },
       "repo": null,
       "expected": "control-proven"
@@ -148,10 +250,12 @@
         "provenance": "CONTROL_PROVEN",
         "registryVersion": 2,
         "controlCurrent": false,
-        "codeCurrent": true
+        "codeCurrent": true,
+        "upgradeable": false
       },
       "repo": {
-        "status": "confirmed"
+        "status": "confirmed",
+        "bound": true
       },
       "expected": "stale"
     },
@@ -161,10 +265,12 @@
         "provenance": "CONTROL_PROVEN",
         "registryVersion": 2,
         "controlCurrent": true,
-        "codeCurrent": false
+        "codeCurrent": false,
+        "upgradeable": false
       },
       "repo": {
-        "status": "confirmed"
+        "status": "confirmed",
+        "bound": true
       },
       "expected": "stale"
     },
@@ -174,10 +280,12 @@
         "provenance": "CONTROL_PROVEN",
         "registryVersion": 2,
         "controlCurrent": false,
-        "codeCurrent": false
+        "codeCurrent": false,
+        "upgradeable": false
       },
       "repo": {
-        "status": "confirmed"
+        "status": "confirmed",
+        "bound": true
       },
       "expected": "stale"
     },
@@ -187,10 +295,12 @@
         "provenance": "CONTROL_PROVEN",
         "registryVersion": 1,
         "controlCurrent": true,
-        "codeCurrent": null
+        "codeCurrent": null,
+        "upgradeable": null
       },
       "repo": {
-        "status": "confirmed"
+        "status": "confirmed",
+        "bound": true
       },
       "expected": "control-proven"
     },
@@ -200,7 +310,8 @@
         "provenance": "CONTROL_PROVEN",
         "registryVersion": 1,
         "controlCurrent": true,
-        "codeCurrent": null
+        "codeCurrent": null,
+        "upgradeable": null
       },
       "repo": {
         "status": "no-file"
@@ -213,10 +324,12 @@
         "provenance": "CONTROL_PROVEN",
         "registryVersion": 1,
         "controlCurrent": false,
-        "codeCurrent": null
+        "codeCurrent": null,
+        "upgradeable": null
       },
       "repo": {
-        "status": "confirmed"
+        "status": "confirmed",
+        "bound": true
       },
       "expected": "stale"
     }

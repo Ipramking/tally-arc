@@ -42,6 +42,13 @@ export function encodeV2(o: { repo?: string; hash?: string; signer?: Address; at
 export const NONE_V1 = () => encodeV1({ repo: "", owner: ZERO, at: 0n, prov: 0 });
 export const NONE_V2 = () => encodeV2({ repo: "", signer: ZERO, at: 0n, prov: 0, method: 0, flags: 0 });
 export const addressWord = (a: Address): Hex => `0x${a.slice(2).toLowerCase().padStart(64, "0")}`;
+export const ZERO_WORD: Hex = `0x${"0".repeat(64)}`;
+/** An eth_getStorageAt reply that answers by slot: slots not listed read as empty, like a contract that is not a proxy. */
+export const storageBySlot = (slots: Record<string, string | Error>) => (params: unknown[]) => {
+  const value = slots[String(params[1]).toLowerCase()];
+  if (value instanceof Error) throw value;
+  return value ?? ZERO_WORD;
+};
 export const boolWord = (b: boolean): Hex => `0x${(b ? "1" : "0").padStart(64, "0")}`;
 
 /** A reply is a value, an Error to throw, an RPC error object, or a function of the request params. */
@@ -76,6 +83,8 @@ export function fakeWorld(spec: { rpc?: Record<string, Record<string, RpcReply>>
       reply = rpc["*"]?.[body.method] ?? rpc[String(body.params[0]).toLowerCase()]?.[body.method];
       // Every address holds code unless a test says otherwise ("0x" = a wallet).
       if (reply === undefined && body.method === "eth_getCode") reply = "0x6001";
+      // Every contract has empty proxy slots unless a test says otherwise.
+      if (reply === undefined && body.method === "eth_getStorageAt") reply = ZERO_WORD;
       if (reply === undefined) return Response.json({ jsonrpc: "2.0", id: 1, error: { code: -32601, message: `no fake for ${body.method}` } });
     }
     if (typeof reply === "function") reply = reply(body.params) as RpcReply;

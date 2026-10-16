@@ -11,8 +11,9 @@ independent things agree:
 1. **Control**: the signer proved on-chain that they own, administer or deployed
    the contract, and still do.
 2. **Code**: the bytecode at the address is unchanged since the record was written.
-3. **Source**: the repository's `tally.json` lists this contract on this network.
+3. **Source**: the repository's `tally.json` lists this contract on this network and names the wallet that registered it.
 
+An upgradeable proxy is never shown as verified, because its code hash does not change when its implementation does.
 Anything less is labelled for what it is. Built for [Arc](https://arc.io), where
 gas is paid in USDC and a bad approval costs real dollars; it works on any EVM chain
 you add to [`chains.json`](chains.json).
@@ -36,9 +37,9 @@ what you see is what the chain supports.
 
 | Level | Colour | Meaning |
 |---|---|---|
-| **Verified** | green | v2 record, control proven and still held, code unchanged, repository confirms. |
-| **Control proven** | blue | Control proven and still held, but the repository is unconfirmed, or the record is on legacy v1. |
-| **Stale** | amber | Control moved to someone else, or the code changed after registration. Treated as void. |
+| **Verified** | green | v2 record, control proven and still held, code unchanged, not an upgradeable proxy, and the repository lists the contract and names the wallet that signed. |
+| **Control proven** | blue | Control proven and still held, but the repository is unconfirmed or names no wallet, the contract is an upgradeable proxy, or the record is on legacy v1. |
+| **Stale** | amber | Control moved to someone else (a deployer stops counting once the contract has another owner), or the code changed after registration. Treated as void. |
 | **Self-attested** | grey | A claim with no on-chain proof. Only possible for contracts that have no owner. Never green. |
 | **Unverified** | red | No record exists. |
 | **Unavailable** | hollow | The chain or registry could not be read. Never shown as unverified: failing to look is not the same as finding nothing. |
@@ -72,13 +73,14 @@ registered, on the default branch:
 {
   "version": 1,
   "contracts": [
-    { "chainId": 5042, "address": "0xYourContract" }
+    { "chainId": 5042, "address": "0xYourContract", "signer": "0xTheWalletThatRegistered" }
   ]
 }
 ```
 
 Clients read it from `https://raw.githubusercontent.com/<owner>/<repo>/HEAD/tally.json`.
-Without it a record stays at **control proven**.
+Without the file, or without `signer`, a record stays at **control proven**. The register page
+shows the exact file to publish, signer included.
 
 **Add a badge to your README.**
 
@@ -116,9 +118,10 @@ runs in [CI](.github/workflows/ci.yml).
 
 See [SECURITY.md](SECURITY.md) to report a vulnerability and
 [docs/security.md](docs/security.md) for the threat model, what each control does, and the
-known limits. Short version: everything read from a registry or a repository is treated
-as hostile input, clients fail towards "unavailable" rather than a misleading answer, and
-the registry has no owner, no upgrade path and no admin key.
+known limits (upgradeable proxies, what "control" means, repository identity). Short version:
+everything read from a registry or a repository is treated as hostile input, clients fail
+towards "unavailable" rather than a misleading answer, and the registry has no owner, no
+upgrade path and no admin key.
 
 ## Configuration
 

@@ -3,12 +3,14 @@ const assert = require("node:assert/strict");
 const { lib, arc, encodeV1, encodeV2, encodeAddressWord, fakeWorld, tallyJson, SIGNER, TARGET, REPO } = require("./helpers");
 
 const registry = lib("registry.js");
+const status = lib("status.js");
 const { lookup } = lib("lookup.js");
 
 const REG_V1 = "0x459Cab32306c439a408cA6b8672CcF6c6A0536d9";
 const REG_V2 = "0x4444444444444444444444444444444444444444";
 const FILE = "https://raw.githubusercontent.com/acme/vault/HEAD/tally.json";
-const LISTS_TARGET = tallyJson({ chainId: 5042, address: TARGET });
+const LISTS_TARGET = tallyJson({ chainId: 5042, address: TARGET, signer: SIGNER });
+const UNBOUND_TARGET = tallyJson({ chainId: 5042, address: TARGET });
 const sel = registry.GET_REGISTRATION;
 const none = (version) => (version === 1 ? encodeV1({ repo: "", owner: "0x0000000000000000000000000000000000000000", at: 0n, prov: 0 }) : encodeV2({ repo: "", signer: "0x0000000000000000000000000000000000000000", at: 0n, prov: 0, method: 0, flags: 0 }));
 
@@ -165,4 +167,118 @@ test("a hostile on-chain repo string never reaches a request or a link", async (
   assert.equal(result.repo.status, "invalid-repo");
   assert.equal(result.repoLink, null);
   assert.equal(world.calls.filter((c) => c.url.includes("raw.githubusercontent")).length, 0);
+});
+
+// ---- what "verified" requires: a named wallet, no proxy, and a deployer that still speaks for the contract
+
+const IMPL_WORD = encodeAddressWord("0x5555555555555555555555555555555555555555");
+const OTHER_OWNER = encodeAddressWord("0x9999999999999999999999999999999999999999");
+const v2live = () => rpcFor({ [REG_V2]: { [sel]: encodeV2() }, [REG_V1]: { [sel]: none(1) } });
+const bodies = (world) => world.calls.map((c) => JSON.parse((c.init && c.init.body) || "{}"));
+const storageCalls = (world) => bodies(world).filter((b) => b.method === "eth_getStorageAt");
+const ownerCalls = (world) =>
+  bodies(world).filter((b) => b.method === "eth_call" && String(b.params[0].to).toLowerCase() === TARGET.toLowerCase() && String(b.params[0].data).startsWith(registry.OWNER));
+
+test("a tally.json entry that names no wallet vouches for the address only: 'control-proven'", async () => {
+  const result = await run(both, fakeWorld({ rpc: v2live(), files: { [FILE]: UNBOUND_TARGET } }));
+  assert.equal(result.level, "control-proven");
+  assert.equal(result.repo.status, "confirmed");
+  assert.equal(result.repo.bound, false);
+  assert.match(status.describe(result.level, result.registration, result.repo), /does not name the wallet/);
+});
+
+test("an entry that names the signer's wallet, on a contract that is not a proxy, is 'verified'", async () => {
+  const result = await run(both, fakeWorld({ rpc: v2live(), files: { [FILE]: LISTS_TARGET } }));
+  assert.equal(result.level, "verified");
+  assert.equal(result.registration.upgradeable, false);
+  assert.equal(result.repo.bound, true);
+});
+
+test("an EIP-1967 implementation proxy never reaches 'verified', even when the repository names the signer", async () => {
+  const world = fakeWorld({ rpc: v2live(), files: { [FILE]: LISTS_TARGET }, storage: { [TARGET]: { [registry.EIP1967_IMPLEMENTATION_SLOT]: IMPL_WORD } } });
+  const result = await run(both, world);
+  assert.equal(result.level, "control-proven");
+  assert.equal(result.registration.upgradeable, true);
+  assert.match(status.describe(result.level, result.registration, result.repo), /upgradeable proxy/);
+});
+
+test("a beacon proxy likewise", async () => {
+  const world = fakeWorld({ rpc: v2live(), files: { [FILE]: LISTS_TARGET }, storage: { [TARGET]: { [registry.EIP1967_BEACON_SLOT]: IMPL_WORD } } });
+  assert.equal((await run(both, world)).level, "control-proven");
+});
+
+test("an unreadable proxy slot makes the answer 'unknown', never 'verified'", async () => {
+  for (const reply of [new Error("socket hang up"), { error: { code: -32000, message: "boom" } }, "not hex"]) {
+    const world = fakeWorld({ rpc: v2live(), files: { [FILE]: LISTS_TARGET }, storage: { [TARGET]: { [registry.EIP1967_IMPLEMENTATION_SLOT]: reply } } });
+    const result = await run(both, world);
+    assert.equal(result.ok, false);
+    assert.equal(result.level, "unknown");
+  }
+});
+
+test("only a live v2 record is probed: stale, self-attested and v1 records cost no storage reads", async () => {
+  for (const rpc of [
+    rpcFor({ [REG_V2]: { [sel]: encodeV2({ flags: 0 }) }, [REG_V1]: { [sel]: none(1) } }),
+    rpcFor({ [REG_V2]: { [sel]: encodeV2({ prov: 1, method: 0, flags: 2 }) }, [REG_V1]: { [sel]: none(1) } }),
+    rpcFor({ [REG_V2]: { [sel]: none(2) }, [REG_V1]: { [sel]: encodeV1() }, [TARGET]: { [registry.OWNER]: encodeAddressWord(SIGNER) } }),
+  ]) {
+    const world = fakeWorld({ rpc, files: { [FILE]: LISTS_TARGET } });
+    await run(both, world);
+    assert.equal(storageCalls(world).length, 0);
+  }
+});
+
+test("a live record is probed once per proxy slot: two reads", async () => {
+  const world = fakeWorld({ rpc: v2live(), files: { [FILE]: LISTS_TARGET } });
+  await run(both, world);
+  assert.deepEqual(storageCalls(world).map((b) => b.params[1]).sort(), [registry.EIP1967_BEACON_SLOT, registry.EIP1967_IMPLEMENTATION_SLOT].sort());
+});
+
+const deployerWorld = (owner) =>
+  fakeWorld({
+    rpc: rpcFor({
+      [REG_V2]: { [sel]: encodeV2({ method: 3 }) },
+      [REG_V1]: { [sel]: none(1) },
+      ...(owner === undefined ? {} : { [TARGET]: { [registry.OWNER]: owner } }),
+    }),
+    files: { [FILE]: LISTS_TARGET },
+  });
+
+test("deployer record: a contract that now names another owner is stale, because the deployer no longer speaks for it", async () => {
+  const result = await run(both, deployerWorld(OTHER_OWNER));
+  assert.equal(result.level, "stale");
+  assert.equal(result.registration.controlCurrent, false);
+  assert.equal(result.repo, null);
+});
+
+test("deployer record: a deployer who is also the owner is 'verified'", async () => {
+  assert.equal((await run(both, deployerWorld(encodeAddressWord(SIGNER)))).level, "verified");
+});
+
+test("deployer record: a contract with no owner() leaves the proof standing", async () => {
+  assert.equal((await run(both, deployerWorld())).level, "verified");
+});
+
+test("deployer record: a renounced owner (zero address) leaves the proof standing", async () => {
+  assert.equal((await run(both, deployerWorld(encodeAddressWord("0x0000000000000000000000000000000000000000")))).level, "verified");
+});
+
+test("deployer record: an owner() answer that is not one clean address word reads as 'no owner', like the registry does", async () => {
+  for (const reply of ["0x" + "ab".repeat(32), "0x1234", "0x" + "00".repeat(40)]) {
+    assert.equal((await run(both, deployerWorld(reply))).level, "verified", reply);
+  }
+});
+
+test("deployer record: an owner() that cannot be read makes the answer 'unknown'", async () => {
+  const result = await run(both, deployerWorld(new TypeError("network down")));
+  assert.equal(result.ok, false);
+  assert.equal(result.level, "unknown");
+});
+
+test("owner and admin records are not re-probed: the registry already re-checks them", async () => {
+  for (const method of [1, 2]) {
+    const world = fakeWorld({ rpc: rpcFor({ [REG_V2]: { [sel]: encodeV2({ method }) }, [REG_V1]: { [sel]: none(1) } }), files: { [FILE]: LISTS_TARGET } });
+    await run(both, world);
+    assert.equal(ownerCalls(world).length, 0, "method " + method);
+  }
 });

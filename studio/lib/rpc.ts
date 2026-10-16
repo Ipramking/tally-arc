@@ -101,6 +101,13 @@ export async function getBlockTimestamp(rpcUrl: string, block: number, options: 
   return seconds;
 }
 
+/** One 32-byte storage slot, normalised to a lowercase 0x-prefixed 64-digit word (some nodes drop leading zeros). */
+export async function getStorageAt(rpcUrl: string, address: Address, slot: Hex, options: NetOptions = {}): Promise<Hex> {
+  const value = await rpcRequest(rpcUrl, "eth_getStorageAt", [address, slot, "latest"], options);
+  if (typeof value !== "string" || !/^0x[0-9a-fA-F]{1,64}$/.test(value)) throw new RpcError("RPC returned malformed storage");
+  return `0x${value.slice(2).toLowerCase().padStart(64, "0")}` as Hex;
+}
+
 export async function getTransactionCount(rpcUrl: string, address: Address, options: NetOptions = {}): Promise<number> {
   const value = await rpcRequest(rpcUrl, "eth_getTransactionCount", [address, "latest"], options);
   if (typeof value !== "string" || !/^0x[0-9a-fA-F]{1,16}$/.test(value)) throw new RpcError("RPC returned a malformed count");

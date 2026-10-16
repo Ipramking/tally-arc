@@ -28,19 +28,32 @@ export const LEVELS: Readonly<Record<Level, { label: string; short: string; css:
   unknown: { label: "Unavailable", short: "unknown", css: "unknown" },
 };
 
-type Evidence = Pick<Registration, "provenance" | "registryVersion" | "controlCurrent" | "codeCurrent">;
+type Evidence = Pick<Registration, "provenance" | "registryVersion" | "controlCurrent" | "codeCurrent" | "upgradeable">;
 
 /** A control-proven record whose proof still holds today. */
 export function isLive(registration: Evidence): boolean {
   return registration.provenance === "CONTROL_PROVEN" && registration.controlCurrent === true && registration.codeCurrent !== false;
 }
 
-export function decideLevel(registration: Evidence | null, repo: Pick<RepoCheck, "status"> | null): Level {
+export function decideLevel(registration: Evidence | null, repo: Pick<RepoCheck, "status" | "bound"> | null): Level {
   if (!registration || registration.provenance === "NONE") return "unverified";
   if (registration.provenance === "SELF_ATTESTED") return "self-attested";
   if (!isLive(registration)) return "stale";
-  // v1 does not record the code hash, so it can never reach "verified".
-  if (registration.registryVersion === 2 && registration.codeCurrent === true && repo?.status === "confirmed") return "verified";
+  // "Verified" needs all of these, and nothing weaker is rounded up:
+  //  - v2: v1 does not record the code hash, so it can never reach "verified".
+  //  - code unchanged, and not an upgradeable proxy (a proxy's code hash survives an upgrade).
+  //    A proxy that has not been probed (null) cannot be verified either.
+  //  - the repository lists the contract AND names the wallet that registered it, so it
+  //    vouches for that wallet and not just for the address.
+  if (
+    registration.registryVersion === 2 &&
+    registration.codeCurrent === true &&
+    registration.upgradeable === false &&
+    repo?.status === "confirmed" &&
+    repo.bound === true
+  ) {
+    return "verified";
+  }
   return "control-proven";
 }
 
@@ -78,13 +91,19 @@ const REPO_TEXT: Readonly<Record<string, string>> = {
 };
 
 /** One plain sentence explaining a level; text only, no markup. */
-export function describe(level: Level, registration?: Evidence | null, repo?: Pick<RepoCheck, "status"> | null): string {
+export function describe(level: Level, registration?: Evidence | null, repo?: Pick<RepoCheck, "status" | "bound"> | null): string {
   switch (level) {
     case "verified":
-      return "The signer proved control on-chain, the code is unchanged, and the repository lists this contract.";
+      return "The signer proved control on-chain, the code is unchanged, and the repository lists this contract and names the signer's wallet.";
     case "control-proven": {
       if (registration?.registryVersion === 1) {
         return "The owner proved control on the legacy v1 registry, which cannot detect code changes. Re-register on v2 to be verified.";
+      }
+      if (registration?.upgradeable === true) {
+        return "The signer proved control on-chain, but this contract is an upgradeable proxy: its logic can change without this record noticing, so it is not shown as verified.";
+      }
+      if (repo?.status === "confirmed" && repo.bound !== true) {
+        return "The signer proved control on-chain and the repository lists this contract, but it does not name the wallet that registered it, so the source link is unconfirmed.";
       }
       const why = repo ? REPO_TEXT[repo.status] : undefined;
       return why

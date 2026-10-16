@@ -38,7 +38,7 @@ describe("checkRepoProof with a signer", () => {
     expect(await run([{ chainId: 5042, address: TARGET, signer: OTHER }], SIGNER)).toMatchObject({ status: "signer-mismatch", named: OTHER.toLowerCase() });
   });
 
-  it("still confirms an entry that names no wallet (files written before the field existed)", async () => {
+  it("still confirms an entry that names no wallet, but marks it unbound (the level then stays control-proven)", async () => {
     expect(await run([{ chainId: 5042, address: TARGET }], SIGNER)).toMatchObject({ status: "confirmed", bound: false });
   });
 });
@@ -54,8 +54,10 @@ describe("the level a reader sees", () => {
     expect(await run([{ chainId: 5042, address: TARGET, signer: SIGNER }])).toMatchObject({ ok: true, level: "verified" });
   });
 
-  it("is verified when the repository lists the contract and names no wallet", async () => {
-    expect(await run([{ chainId: 5042, address: TARGET }])).toMatchObject({ ok: true, level: "verified" });
+  it("is NOT verified when the repository lists the contract but names no wallet, and says why", async () => {
+    const result = await run([{ chainId: 5042, address: TARGET }]);
+    expect(result).toMatchObject({ ok: true, level: "control-proven" });
+    expect(describeLevel("control-proven", result.ok ? result.registration : null, result.ok ? result.repo : null)).toMatch(/does not name the wallet/);
   });
 
   it("is NOT verified when the repository names a different wallet, and says why", async () => {

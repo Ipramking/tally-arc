@@ -97,7 +97,7 @@ async function main() {
   console.log(`Provenance: ${LEVELS[Number(reg.provenance)]}  control-proven & current: ${reg.isControlProven}`);
   console.log(`Repo:       ${reg.githubRepo}`);
   console.log(`\nNext: add { "chainId": ${chainId}, "address": "${target}", "signer": "${signer.address}" } to tally.json in ${repo}`);
-  console.log(`      ("signer" is optional; it makes the repository itself name the wallet it authorises.)`);
+  console.log(`      ("signer" is required for "verified": it makes the repository itself name the wallet it authorises.)`);
 }
 
 main().catch((e) => {

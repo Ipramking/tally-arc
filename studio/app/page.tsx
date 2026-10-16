@@ -11,17 +11,17 @@ const LEVEL_COPY: { level: Level; title: string; text: string }[] = [
   {
     level: "verified",
     title: "All three agree",
-    text: "Control proven on-chain and still held, the code unchanged since registration, and the repository's tally.json lists this contract. Checked live, every time.",
+    text: "Control proven on-chain and still held, the code unchanged since registration, and the repository's tally.json lists this contract and names the signer's wallet. Never an upgradeable proxy. Checked live, every time.",
   },
   {
     level: "control-proven",
-    title: "Control, no source link",
-    text: "The signer proved control and still holds it, but the repository does not confirm the contract yet. Legacy v1 records stop here because v1 cannot watch the code.",
+    title: "Control, no full match",
+    text: "The signer proved control and still holds it, but the repository does not confirm the contract and its wallet yet, or the contract is an upgradeable proxy. Legacy v1 records stop here because v1 cannot watch the code.",
   },
   {
     level: "stale",
     title: "The proof expired",
-    text: "Control moved to someone else, or the code at the address changed after it was registered. The record is treated as void.",
+    text: "Control moved to someone else (a deployer stops counting once the contract has another owner), or the code at the address changed after it was registered. The record is treated as void.",
   },
   {
     level: "self-attested",
@@ -51,7 +51,15 @@ const LIMITS: { title: string; text: string }[] = [
   },
   {
     title: "Repositories can change hands.",
-    text: "tally.json is read from the default branch at the moment you look. If a GitHub account is renamed or deleted, someone else can claim the old name.",
+    text: "tally.json is read from the default branch at the moment you look. If a GitHub account is renamed or deleted, someone else can claim the old name and publish a file that names the same public wallet.",
+  },
+  {
+    title: "Upgradeable proxies are never verified.",
+    text: "A proxy's code hash does not change when its implementation does. Tally detects the standard EIP-1967 and beacon proxies and stops them at control proven. Other upgrade patterns, such as diamonds and hand-rolled proxies, are not detected.",
+  },
+  {
+    title: "Control is an interface check.",
+    text: "The proof is that owner(), the default admin role or the deployer address names the signer. A contract can be controlled in ways those checks do not see.",
   },
   {
     title: "Legacy v1 records are weaker.",
@@ -167,7 +175,7 @@ export default async function Home({ searchParams }: HomeProps) {
             <div className="cell">
               <h3>3. Source</h3>
               <p>
-                The repository publishes a <span className="mono">tally.json</span> that lists the contract and its network. A claim about a repository that does not agree is never shown as verified.
+                The repository publishes a <span className="mono">tally.json</span> that lists the contract, its network and the wallet that registered it. A claim about a repository that does not agree is never shown as verified.
               </p>
             </div>
           </div>
@@ -206,7 +214,7 @@ export default async function Home({ searchParams }: HomeProps) {
               <div className="idx">02</div>
               <h3>Publish</h3>
               <p>
-                Commit a <span className="mono">tally.json</span> to the repository root listing the contract. It takes one minute and is what turns control proven into verified.
+                Commit a <span className="mono">tally.json</span> to the repository root listing the contract and the registering wallet. It takes one minute and is what turns control proven into verified.
               </p>
             </div>
             <div className="step">

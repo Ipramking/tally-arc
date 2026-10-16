@@ -38,7 +38,7 @@ test("checkRepoProof reports a mismatch, with the wallet named, when the file na
   assert.equal(r.named, OTHER);
 });
 
-test("checkRepoProof still confirms an entry that names no wallet", async () => {
+test("checkRepoProof still confirms an entry that names no wallet, but marks it unbound (the level then stays control-proven)", async () => {
   const r = await run([{ chainId: 5042, address: TARGET }], SIGNER);
   assert.equal(r.status, "confirmed");
   assert.equal(r.bound, false);
@@ -53,8 +53,10 @@ test("the level is verified when the repository names the wallet that registered
   assert.equal((await level([{ chainId: 5042, address: TARGET, signer: SIGNER }])).level, "verified");
 });
 
-test("the level is verified when the repository lists the contract and names no wallet", async () => {
-  assert.equal((await level([{ chainId: 5042, address: TARGET }])).level, "verified");
+test("the level is NOT verified when the repository lists the contract but names no wallet, and it says why", async () => {
+  const r = await level([{ chainId: 5042, address: TARGET }]);
+  assert.equal(r.level, "control-proven");
+  assert.match(status.describe(r.level, r.registration, r.repo), /does not name the wallet/);
 });
 
 test("the level is NOT verified when the repository names a different wallet, and it says why", async () => {

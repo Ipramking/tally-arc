@@ -25,6 +25,12 @@ export interface Registration {
   controlCurrent: boolean | null;
   /** Is the code at the target unchanged since registration? null for v1. */
   codeCurrent: boolean | null;
+  /**
+   * Is the target an upgradeable proxy (EIP-1967 implementation or beacon set)? null until
+   * probed. Only a record that is not a proxy can be "verified": a proxy's code hash does not
+   * change when its implementation does.
+   */
+  upgradeable: boolean | null;
 }
 
 export const PROVENANCE: readonly Provenance[] = ["NONE", "SELF_ATTESTED", "CONTROL_PROVEN"];
@@ -88,6 +94,7 @@ export function decodeRegistration(version: 1 | 2, registry: Address, data: Hex)
         method: level === "CONTROL_PROVEN" ? "OWNER" : "NONE",
         controlCurrent: null,
         codeCurrent: null,
+        upgradeable: null,
       };
     }
     const [githubRepo, buildHash, signer, registeredAt, provenance, , method, flags] = decodeFunctionResult({
@@ -106,6 +113,7 @@ export function decodeRegistration(version: 1 | 2, registry: Address, data: Hex)
       method: indexOf(PROOF_METHODS, method, "method"),
       controlCurrent: (flags & FLAG_CONTROL_CURRENT) !== 0,
       codeCurrent: (flags & FLAG_CODE_CURRENT) !== 0,
+      upgradeable: null,
     };
   } catch (error) {
     if (error instanceof DecodeError) throw error;
@@ -117,6 +125,24 @@ export function decodeRegistration(version: 1 | 2, registry: Address, data: Hex)
 export async function readRegistry(chain: ChainDef, registry: RegistryDef, target: Address, options: NetOptions = {}): Promise<Registration> {
   const data = await ethCall(chain.rpcUrl, registry.address, encodeGetRegistration(registry.version, target), options);
   return decodeRegistration(registry.version, registry.address, data);
+}
+
+/**
+ * The owner a contract names right now (lowercase), or null when it names none: no owner(), a
+ * revert, an answer that is not one address word, or the zero address. This is the registry's own
+ * reading of owner() (TallyRegistryV2._ownerOf). A network failure throws, never reads as "none".
+ */
+export async function readOwner(chain: ChainDef, target: Address, options: NetOptions = {}): Promise<string | null> {
+  try {
+    const data = await ethCall(chain.rpcUrl, target, encodeFunctionData({ abi: ownableAbi, functionName: "owner" }), options);
+    if (data.length !== 66) return null;
+    const word = data.slice(2).toLowerCase();
+    if (!/^0{24}/.test(word) || /^0+$/.test(word)) return null;
+    return `0x${word.slice(24)}`;
+  } catch (error) {
+    if (error instanceof RpcError && error.revert) return null;
+    throw error;
+  }
 }
 
 /** Does `target.owner()` currently equal `signer`? A target without owner() answers false. */

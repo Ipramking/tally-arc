@@ -20,12 +20,17 @@ In scope:
 - The studio (`studio/`), including the badge API and the register flow.
 - The browser extension (`extension/`).
 - Anything that makes a record show a **higher trust level than the evidence supports**,
-  for example showing "verified" without a live control proof, an unchanged code hash and
-  a confirming `tally.json`.
+  for example showing "verified" without a live control proof, an unchanged code hash, a
+  contract that is not a detected proxy, and a `tally.json` that lists the contract and names
+  the signer.
 
 Known and documented, so not vulnerabilities on their own: the limits of the legacy v1
 registry (it is deployed and immutable), the repository-proof limits (such as repo-jacking),
-and the items listed under "What is not covered" in [docs/security.md](docs/security.md).
+the registry-level behaviours the clients compensate for (a deployer's record staying
+"control current", proxies keeping their code hash across an upgrade, self-attested slots on
+contracts nobody can prove control of), and the items listed under "What is not covered" in
+[docs/security.md](docs/security.md). A way to make a client show a higher level than those
+rules allow is a vulnerability.
 
 ## Deployed contracts
 

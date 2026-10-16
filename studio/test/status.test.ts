@@ -23,8 +23,12 @@ describe("status", () => {
   });
 
   it("describe never claims more than the level", () => {
-    const reg = (extra: object = {}) => ({ provenance: "CONTROL_PROVEN" as const, registryVersion: 2 as const, controlCurrent: true, codeCurrent: true, ...extra });
+    const reg = (extra: object = {}) => ({ provenance: "CONTROL_PROVEN" as const, registryVersion: 2 as const, controlCurrent: true, codeCurrent: true, upgradeable: false, ...extra });
     expect(describeLevel("verified")).toMatch(/repository lists this contract/);
+    expect(describeLevel("verified")).toMatch(/names the signer's wallet/);
+    expect(describeLevel("control-proven", reg({ upgradeable: true }), { status: "confirmed", bound: true })).toMatch(/upgradeable proxy/);
+    expect(describeLevel("control-proven", reg(), { status: "confirmed", bound: false })).toMatch(/does not name the wallet/);
+    expect(describeLevel("control-proven", reg(), { status: "confirmed" })).toMatch(/does not name the wallet/);
     expect(describeLevel("control-proven", reg(), { status: "not-listed" })).toMatch(/does not list this contract.*unconfirmed/);
     expect(describeLevel("control-proven", reg(), { status: "unavailable" })).toMatch(/could not be checked/);
     expect(describeLevel("control-proven", reg({ registryVersion: 1 }), { status: "confirmed" })).toMatch(/legacy v1/);

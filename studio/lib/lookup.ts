@@ -5,7 +5,8 @@ import type { Address } from "viem";
 import type { ChainDef } from "./chains.generated";
 import type { NetOptions } from "./net";
 import { checkRepoProof, type RepoCheck } from "./repo-proof";
-import { currentOwnerIs, readRegistry, type Registration } from "./registry";
+import { isUpgradeableProxy } from "./proxy";
+import { currentOwnerIs, readOwner, readRegistry, type Registration } from "./registry";
 import { getCode } from "./rpc";
 import { isAddress, parseGithubRepo } from "./safe-url";
 import { decideLevel, isLive, pickBest, type Level } from "./status";
@@ -30,10 +31,20 @@ export async function lookupContract(input: { chain: ChainDef; address: string }
       if (record.registryVersion === 1 && record.provenance === "CONTROL_PROVEN") {
         record.controlCurrent = await currentOwnerIs(chain, address as Address, record.signer, net);
       }
+      // A deployer proof is a permanent fact, so the registry keeps reporting it as "still held" after the
+      // contract changed hands. Tally does not: once the contract names another owner, the deployer no
+      // longer speaks for it, and its record reads stale. A contract with no owner() leaves the proof as is.
+      if (record.registryVersion === 2 && record.provenance === "CONTROL_PROVEN" && record.method === "DEPLOYER" && record.controlCurrent === true) {
+        const owner = await readOwner(chain, address as Address, net);
+        if (owner !== null && owner !== record.signer.toLowerCase()) record.controlCurrent = false;
+      }
       records.push(record);
     }
 
     const best = pickBest(records);
+    // A proxy's code hash survives an upgrade, so the "code unchanged" leg says nothing about it. Probe the
+    // standard proxy slots for the record that could reach "verified"; a failed probe makes the answer unknown.
+    if (best && best.registryVersion === 2 && isLive(best)) best.upgradeable = await isUpgradeableProxy(chain, address as Address, net);
     const repo = best && isLive(best) ? await checkRepoProof({ repoUrl: best.githubRepo, chainId: chain.id, address, signer: best.signer, ...net }) : null;
     let level = decideLevel(best, repo);
     // No record: a wallet has no code, so there is nothing to verify and nothing to register.

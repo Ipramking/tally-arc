@@ -27,6 +27,7 @@ describe("registry decoding", () => {
       method: "OWNER",
       controlCurrent: null,
       codeCurrent: null,
+      upgradeable: null,
     });
   });
 
@@ -43,6 +44,7 @@ describe("registry decoding", () => {
         expect(record.method).toBe(methods[method]);
         expect(record.controlCurrent).toBe((flags & 1) !== 0);
         expect(record.codeCurrent).toBe((flags & 2) !== 0);
+        expect(record.upgradeable, "set later by the lookup, never by the registry").toBeNull();
       }
     }
   });

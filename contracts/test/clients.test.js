@@ -156,6 +156,7 @@ describe("clients agree with the contracts", () => {
         method: "OWNER",
         controlCurrent: true,
         codeCurrent: true,
+        upgradeable: null, // not a registry fact: the lookup probes the proxy slots afterwards
       });
       expect(decoded.githubRepo).to.equal(REPO);
       expect(decoded.buildHash).to.equal(longHash);
@@ -246,6 +247,7 @@ describe("clients agree with the contracts", () => {
         method: "OWNER",
         controlCurrent: null,
         codeCurrent: null,
+        upgradeable: null,
         v1Verified: true,
       });
       expect(Number(real.provenance)).to.equal(PROV.CONTROL);

@@ -26,9 +26,9 @@ Tally links a deployed smart contract to its public source repository and makes 
 link checkable instead of merely asserted. A registry records that the signer proved
 control of the contract on-chain (as its owner, an admin, or its deployer) together with
 the contract's code hash. A contract only shows as **verified** when that proof still holds,
-the code is unchanged, and the repository's own `tally.json` lists the contract. Anything
-less is labelled for what it is: control proven, stale, self-attested, unverified, or
-unavailable.
+the code is unchanged, it is not an upgradeable proxy, and the repository's own `tally.json`
+lists the contract and names the registering wallet. Anything less is labelled for what it is:
+control proven, stale, self-attested, unverified, or unavailable.
 
 Three surfaces share one decision rule:
 - A Manifest V3 Chrome extension that tags addresses on the block explorer.
@@ -58,6 +58,10 @@ On Arc mainnet (chain ID 5042):
   repository strings, gas-capped probes of hostile contracts).
 - The studio's ABIs and EIP-712 types, and the extension's byte-level decoder, are checked against
   the real compiled contracts, and all three packages run in CI.
+- Outside review found two places where the deployed registry says more than it knows (a
+  deployer's record stays "control current" after the contract changes hands, and a proxy keeps its
+  code hash across an upgrade). The registry is immutable, so the clients enforce the stricter rule
+  and tests pin the registry behaviour; both limits are documented in `docs/security.md`.
 - Clients treat every registry and repository string as hostile input: strict link parsing,
   text-only rendering, a nonce-based Content-Security-Policy, and a failure to read the chain
   shows "unavailable" rather than a misleading "unverified".

@@ -31,10 +31,22 @@
         if (record.registryVersion === 1 && record.provenance === "CONTROL_PROVEN") {
           record.controlCurrent = await registry.v1ControlCurrent(chain, address, record.signer, fetchImpl, timeoutMs);
         }
+        // A deployer proof is a permanent fact, so the registry keeps reporting it as "still held" after the
+        // contract changed hands. Tally does not: once the contract names another owner, the deployer no
+        // longer speaks for it, and its record reads stale. A contract with no owner() leaves the proof as is.
+        if (record.registryVersion === 2 && record.provenance === "CONTROL_PROVEN" && record.method === "DEPLOYER" && record.controlCurrent === true) {
+          const owner = await registry.readOwner(chain, address, fetchImpl, timeoutMs);
+          if (owner !== null && owner !== record.signer.toLowerCase()) record.controlCurrent = false;
+        }
         records.push(record);
       }
 
       const best = status.pickBest(records);
+      // A proxy's code hash survives an upgrade, so the "code unchanged" leg says nothing about it. Probe the
+      // standard proxy slots for the record that could reach "verified"; a failed probe makes the answer unknown.
+      if (best && best.registryVersion === 2 && status.isLive(best)) {
+        best.upgradeable = await registry.isUpgradeableProxy(chain, address, fetchImpl, timeoutMs);
+      }
       let repo = null;
       if (best && status.isLive(best)) {
         repo = await repoProof.checkRepoProof({ repoUrl: best.githubRepo, chainId: chain.id, address, signer: best.signer, fetchImpl, timeoutMs });

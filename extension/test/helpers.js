@@ -21,7 +21,8 @@ const abiV2 = parseAbi([
 ]);
 
 const ZERO = "0x0000000000000000000000000000000000000000";
-const SIGNER = "0x1111111111111111111111111111111111111111";
+const ZERO_WORD = "0x" + "0".repeat(64);
+const SIGNER ="0x1111111111111111111111111111111111111111";
 const TARGET = "0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb";
 const REPO = "https://github.com/acme/vault";
 
@@ -84,9 +85,12 @@ function fakeFetch(handler) {
  * rpc: { [toLower]: { [selector]: resultHex | Error | {error:{code,message}} } }
  * files: { [url]: string | number (status) | Error }
  */
-function fakeWorld({ rpc = {}, files = {}, code = {} } = {}) {
+function fakeWorld({ rpc = {}, files = {}, code = {}, storage = {} } = {}) {
   // eth_getCode: every address holds code unless a test says otherwise ("0x" = a wallet).
   const codeOf = Object.fromEntries(Object.entries(code).map(([k, v]) => [k.toLowerCase(), v]));
+  // eth_getStorageAt: every slot is empty (not a proxy) unless a test says otherwise.
+  // storage: { [addressLower]: { [slotLower]: wordHex | Error | {error:{code,message}} } }
+  const storageOf = Object.fromEntries(Object.entries(storage).map(([k, v]) => [k.toLowerCase(), v]));
   return fakeFetch(async (url, init) => {
     if (url.startsWith("https://raw.githubusercontent.com/")) {
       const file = files[url];
@@ -98,6 +102,14 @@ function fakeWorld({ rpc = {}, files = {}, code = {} } = {}) {
     const body = JSON.parse(init.body);
     if (body.method === "eth_getCode") {
       const reply = String(body.params[0]).toLowerCase() in codeOf ? codeOf[String(body.params[0]).toLowerCase()] : "0x6001";
+      if (reply instanceof Error) throw reply;
+      if (reply && reply.error) return Response.json({ jsonrpc: "2.0", id: 1, error: reply.error });
+      return Response.json({ jsonrpc: "2.0", id: 1, result: reply });
+    }
+    if (body.method === "eth_getStorageAt") {
+      const slots = storageOf[String(body.params[0]).toLowerCase()] || {};
+      const slot = String(body.params[1]).toLowerCase();
+      const reply = slot in slots ? slots[slot] : ZERO_WORD;
       if (reply instanceof Error) throw reply;
       if (reply && reply.error) return Response.json({ jsonrpc: "2.0", id: 1, error: reply.error });
       return Response.json({ jsonrpc: "2.0", id: 1, result: reply });
@@ -114,6 +126,6 @@ function fakeWorld({ rpc = {}, files = {}, code = {} } = {}) {
 const tallyJson = (...contracts) => JSON.stringify({ version: 1, contracts });
 
 module.exports = {
-  root, lib, chains, arc, vectors, ZERO, SIGNER, TARGET, REPO,
+  root, lib, chains, arc, vectors, ZERO, ZERO_WORD, SIGNER, TARGET, REPO,
   encodeV1, encodeV2, encodeNone, encodeAddressWord, registryRpc, v1Registry, textResponse, fakeFetch, fakeWorld, tallyJson,
 };

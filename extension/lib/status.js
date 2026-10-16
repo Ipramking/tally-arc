@@ -8,7 +8,8 @@
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   /**
-   * verified        control proven + still held + code unchanged + repo lists this contract
+   * verified        control proven + still held + code unchanged + not an upgradeable proxy
+   *                 + the repo lists this contract and names the registering wallet
    * control-proven  control proven and still held, but the source link is not confirmed
    *                 (or the registry cannot track code changes, i.e. v1)
    * stale           the proof no longer holds: control moved or the code changed
@@ -45,8 +46,20 @@
     if (!registration || registration.provenance === "NONE") return "unverified";
     if (registration.provenance === "SELF_ATTESTED") return "self-attested";
     if (!isLive(registration)) return "stale";
-    // v1 does not record the code hash, so it can never reach "verified".
-    if (registration.registryVersion === 2 && registration.codeCurrent === true && repo && repo.status === "confirmed") {
+    // "Verified" needs all of these, and nothing weaker is rounded up:
+    //  - v2: v1 does not record the code hash, so it can never reach "verified".
+    //  - code unchanged, and not an upgradeable proxy (a proxy's code hash survives an upgrade).
+    //    A proxy that has not been probed (null) cannot be verified either.
+    //  - the repository lists the contract AND names the wallet that registered it, so it
+    //    vouches for that wallet and not just for the address.
+    if (
+      registration.registryVersion === 2 &&
+      registration.codeCurrent === true &&
+      registration.upgradeable === false &&
+      repo &&
+      repo.status === "confirmed" &&
+      repo.bound === true
+    ) {
       return "verified";
     }
     return "control-proven";
@@ -89,10 +102,16 @@
   function describe(level, registration, repo) {
     switch (level) {
       case "verified":
-        return "The signer proved control on-chain, the code is unchanged, and the repository lists this contract.";
+        return "The signer proved control on-chain, the code is unchanged, and the repository lists this contract and names the signer's wallet.";
       case "control-proven": {
         if (registration && registration.registryVersion === 1) {
           return "The owner proved control on the legacy v1 registry, which cannot detect code changes. Re-register on v2 to be verified.";
+        }
+        if (registration && registration.upgradeable === true) {
+          return "The signer proved control on-chain, but this contract is an upgradeable proxy: its logic can change without this record noticing, so it is not shown as verified.";
+        }
+        if (repo && repo.status === "confirmed" && repo.bound !== true) {
+          return "The signer proved control on-chain and the repository lists this contract, but it does not name the wallet that registered it, so the source link is unconfirmed.";
         }
         const why = repo && REPO_TEXT[repo.status];
         return why

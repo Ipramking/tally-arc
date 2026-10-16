@@ -23,9 +23,9 @@ vectors in [`test-vectors/`](../test-vectors) so they cannot drift.
 
 | Level | Requires |
 |---|---|
-| **verified** | A **v2** record that is control-proven, the signer **still controls** the contract, the code hash is **unchanged**, and the repository's `tally.json` **lists** this contract on this chain. |
-| **control proven** | Control proven and still held, but the repository check did not confirm. Also the cap for legacy v1 records (v1 has no code hash). |
-| **stale** | A control proof that no longer holds: control moved, or the code changed. |
+| **verified** | A **v2** record that is control-proven, the signer **still controls** the contract, the code hash is **unchanged**, the contract is **not an upgradeable proxy**, and the repository's `tally.json` **lists** this contract on this chain **and names the wallet that signed the record**. |
+| **control proven** | Control proven and still held, but something short of the full match: the repository check did not confirm or its entry names no wallet, or the contract is an upgradeable proxy. Also the cap for legacy v1 records (v1 has no code hash). |
+| **stale** | A control proof that no longer holds: control moved (for a deployer proof: the contract now has an owner other than the deployer), or the code changed. |
 | **self-attested** | A claim without on-chain proof. |
 | **unverified** | No registry has a record. |
 | **unknown** | A registry could not be read. |
@@ -40,9 +40,19 @@ Rules that matter:
   evidence wins (live control, then stale control, then self-attested); ties go to the
   newest registry. A throwaway self-attested record on a newer registry cannot hide a
   live control proof on an older one.
-- **Deployer proofs** (`CREATE(signer, nonce) == target`) are permanent facts, so they stay
-  "control current". The contract's current owner or admin can always replace them with a
-  stronger claim.
+- **Deployer proofs** (`CREATE(signer, nonce) == target`) are permanent facts on-chain, so
+  the registry itself keeps reporting them as "control current" forever. The clients do not:
+  when the contract names an owner other than the deployer, the deployer's record reads
+  *stale*, because a deployer who gave a contract away no longer speaks for it. A contract
+  with no `owner()`, or a renounced one, leaves the proof standing. The contract's current
+  owner or admin can always replace the record with a stronger claim, or revoke it. Pinned by
+  [`contracts/test/v2-review-edges.test.js`](../contracts/test/v2-review-edges.test.js).
+- **Upgradeable proxies are never verified.** A proxy's code hash does not change when its
+  implementation does, so the registry cannot see an upgrade. The clients read the two
+  EIP-1967 slots (implementation and beacon, see
+  [`test-vectors/proxy-slots.json`](../test-vectors/proxy-slots.json)); if either is set the
+  record stops at *control proven*. A slot that cannot be read makes the answer *unknown*,
+  never "not a proxy". Other upgrade patterns (diamonds, hand-rolled proxies) are not detected.
 
 ## 3. Registry v2
 
@@ -55,7 +65,7 @@ attacker (or the maintainer) to take over.
 | Who can register | Anyone can relay; the **signer** must authorise with an EIP-712 signature. ERC-1271 is supported, so Safes and smart accounts can register. |
 | Control is proven on-chain | `OWNER` (`owner() == signer`), `ADMIN_ROLE` (`hasRole(DEFAULT_ADMIN_ROLE, signer)`) or `DEPLOYER` (`CREATE(signer, nonce) == target`). A declared proof that fails **reverts**; it is never silently downgraded. |
 | No self-attesting a controlled contract | A claim with no proof reverts `ControllerExists` if the contract has an `owner()`. |
-| Squatters cannot lock anyone out | Updates are rank based (owner/admin 3, deployer 2, self-attested 1). The strongest *live* claim wins, and a record whose code changed counts as nothing. v1 had no such rule (V1-2 below). |
+| Squatters cannot lock anyone out | Updates are rank based (owner/admin 3, deployer 2, self-attested 1). The strongest *live* claim wins, and a record whose code changed counts as nothing. So a squatter cannot lock out an owner, an admin or a deployer. The one exception, a contract nobody can prove control of, is listed in section 7. v1 had no such rule (V1-2 below). |
 | Code changes void records | The code hash is stored at registration and compared on every read. |
 | Replay protection | Per-signer sequential nonce, a signature deadline, and a domain bound to the chain and the registry address. |
 | Hostile targets | `owner()` and `hasRole()` are probed with a gas cap and exactly one return word read. A target cannot revert the registration, burn meaningful gas, or return oversized data. Tested against gas bombs, return bombs, reverting and dirty-answer targets. |
@@ -100,19 +110,19 @@ The repository publishes `tally.json` at its root, on the default branch:
 { "version": 1, "contracts": [ { "chainId": 5042, "address": "0x...", "signer": "0x..." } ] }
 ```
 
-`signer` is optional. It names the wallet the repository authorises to register that
-contract. When an entry names a wallet it must be the wallet that signed the on-chain record;
-if it names a different one (or a value that is not an address) the record is **not**
-verified. When an entry names none, it still confirms, as it did before the field existed.
-That makes a hand-over explicit on both sides: the new controller registers, and the
-repository's owner updates one line to name them.
+`signer` names the wallet the repository authorises to register that contract, and **verified
+requires it**. The entry must name the wallet that signed the on-chain record. If it names a
+different one (or a value that is not an address) the record is **not** verified. If it names
+none, the file still lists the contract (`confirmed`, `bound: false`) but vouches for the
+address only, so the record stays at *control proven*. That makes a hand-over explicit on both
+sides: the new controller registers, and the repository's owner updates one line to name them.
 
 Clients fetch `https://raw.githubusercontent.com/<owner>/<repo>/HEAD/tally.json` with:
 the owner and repo name validated first; no redirects; no credentials; a timeout; at most
 64 KB; only the first 1000 entries read; strict shape and version checks. Results are
 `confirmed`, `not-listed`, `signer-mismatch`, `no-file`, `invalid-file`, `invalid-repo` or
-`unavailable`. Only `confirmed` can contribute to "verified". The studio and the extension apply
-the same rule, and both are tested against
+`unavailable`. Only `confirmed` with `bound` set (the entry names the signer) can contribute to
+"verified". The studio and the extension apply the same rule, and both are tested against
 [`test-vectors/repo-signer.json`](../test-vectors/repo-signer.json) so they cannot drift apart.
 
 The studio never asks anyone to replace their `tally.json` blindly. It reads the current file and
@@ -123,10 +133,13 @@ read the file it offers a single entry to add, never a whole file.
 Limits you should know about:
 
 - **A file without `signer` does not bind a wallet.** It proves the repository lists the
-  contract, not which wallet it authorises. Naming the wallet closes that gap.
+  contract, not which wallet it authorises, so it cannot produce *verified*: the record stays
+  at *control proven* and the studio asks for the signer to be added.
 - **Repo-jacking.** If a GitHub account is renamed or deleted, someone else can register
   the old name and publish a `tally.json` there. A record naming the old repository would
-  then be confirmed by the wrong party.
+  then be confirmed by the wrong party. Naming the wallet does not stop this: the wallet is
+  public on-chain, so the new owner of the name can copy it into their file. The real fix is
+  a manifest signed by the wallet; that is not built yet (section 7).
 - **Maintainers control the file.** Whoever can push to the default branch can add or
   remove entries at any time. Verified means the repository's owners agree *today*.
 - **Availability.** GitHub rate limits or outages show as `unavailable`, which keeps the
@@ -197,6 +210,27 @@ probe `owner()` themselves, and cap v1 records at *control proven* because v1 ha
   was also exercised by injecting deliberate bugs and confirming the suite caught each one
   (done by hand during development, not part of CI). That is not a substitute for an audit
   before real value depends on it.
+- **"Control" is an interface check, not authority.** The proof is that `owner()`, the default
+  admin role or the deployer address names the signer. A contract can answer those honestly and
+  still be controlled some other way (custom access control, timelocks, governance), and a
+  contract can expose an `owner()` that does not describe who really decides. Contracts with no
+  such surface can only be deployer-proven or self-attested.
+- **Upgradeable proxies beyond EIP-1967.** Standard implementation and beacon proxies are
+  detected and capped at *control proven* (section 2). Diamonds and hand-rolled proxies are not
+  detected, and the registry itself does not track implementations; only a future registry could
+  pin them.
+- **A former deployer's record on the registry.** v2 treats a deployer proof as permanent
+  (`isControlProven` stays true for it), and the deployed contract cannot change. Tally's clients
+  lower such a record to *stale* when the contract names another owner (section 2). Anything
+  reading the registry directly must apply the same rule.
+- **Contracts nobody can prove control of.** A contract with no `owner()` that was not deployed
+  by a plain `CREATE` from a wallet (a factory or `CREATE2` deployment, for example) can only be
+  self-attested. The first self-attested claim holds the slot until its signer revokes it or the
+  code changes. The badge says *self-attested* and is never green, but the real team cannot
+  replace it.
+- **Repository identity.** A `tally.json` naming the wallet vouches for that wallet only while
+  the repository is in the right hands (section 4). A manifest signed by the wallet would remove
+  the dependence on GitHub account ownership; it is not built.
 - **RPC trust.** Clients trust the configured RPC endpoint for chain state. A malicious or
   compromised RPC could lie. Run your own endpoint for anything important (see
   `TALLY_RPC_URL_<CHAIN>` in [`studio/.env.local.example`](../studio/.env.local.example)).

@@ -41,8 +41,8 @@ REGISTRY=0x<registry> TARGET=0x<demo> REPO=https://github.com/<you>/<repo> \
   npx hardhat run scripts/register.js --network arcTestnet
 ```
 
-Add `{ "chainId": 5042002, "address": "0x<demo>" }` to that repository's `tally.json`, push
-it, and open `/c/0x<demo>?chain=arc-testnet` in the studio (`npm --prefix studio run dev`).
+Add `{ "chainId": 5042002, "address": "0x<demo>", "signer": "0x<the wallet that registered it>" }`
+to that repository's `tally.json` (`signer` is required for **verified**), push it, and open `/c/0x<demo>?chain=arc-testnet` in the studio (`npm --prefix studio run dev`).
 You should see **Tally Verified** with every row of the evidence checklist ticked.
 
 ## 2. Deploy to mainnet

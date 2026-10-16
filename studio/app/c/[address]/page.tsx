@@ -85,7 +85,10 @@ export default async function RecordPage({ params, searchParams }: Props) {
   const repoLink = result.ok ? result.repoLink : null;
   const parsedRepo = registration ? parseGithubRepo(registration.githubRepo) : null;
   const hasV2 = chain.registries.some((r) => r.version === 2);
-  const needsTallyJson = result.ok && registration !== null && isLive(registration) && result.repo?.status !== "confirmed";
+  // Publishing tally.json only helps while it can change the level: not for an upgradeable proxy, and not once
+  // the repository already lists the contract AND names the signer's wallet.
+  const needsTallyJson =
+    result.ok && registration !== null && isLive(registration) && registration.upgradeable !== true && !(result.repo?.status === "confirmed" && result.repo.bound === true);
   // Merged with what the repository already lists, so adding this contract never drops the others.
   const snippet = needsTallyJson && registration && registration.registryVersion === 2 ? await buildTallySnippet({ repoUrl: registration.githubRepo, chainId: chain.id, address, signer: registration.signer }) : null;
   const badgeUrl = `${STUDIO_URL}/api/badge/${address}?chain=${chain.key}`;
@@ -165,7 +168,7 @@ export default async function RecordPage({ params, searchParams }: Props) {
             </p>
           ) : (
             <>
-              <p className="hint">The record turns verified as soon as the repository&apos;s tally.json, on the default branch, lists this contract.</p>
+              <p className="hint">The record turns verified as soon as the repository&apos;s tally.json, on the default branch, lists this contract and names the signer&apos;s wallet.</p>
               {snippet && (
                 <div className="mt-24">
                   <SnippetView snippet={snippet} />

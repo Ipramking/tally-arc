@@ -258,7 +258,8 @@ export function RegisterForm({ chain, initialAddress }: { chain: ChainDef; initi
           <div className="kicker">Publish tally.json</div>
           <p className="hint">
             This is how the repository itself agrees the contract is its own. Anyone can point a record at someone else&apos;s repository, so Tally only shows <b>verified</b> when the repository&apos;s
-            tally.json lists the contract. Commit it to the root, on the default branch, then check it below. Doing it before you sign means the record is verified straight away.
+            tally.json lists the contract and names the wallet that registered it (the file below already does). Commit it to the root, on the default branch, then check it below. Doing it before you
+            sign means the record is verified straight away.
           </p>
           <div className="mt-24">
             <LiveTallySnippet repo={input.repo} chainKey={chain.key} chainId={chain.id} address={input.target} signer={account ?? undefined} />
@@ -303,7 +304,7 @@ export function RegisterForm({ chain, initialAddress }: { chain: ChainDef; initi
             {" or "}
             <Link href={`/c/${done.target}?chain=${chain.key}`}>open the record and its history</Link>.
           </div>
-          <p className="hint">The record reads verified once the repository&apos;s tally.json lists this contract. The panel above shows the file and can check that it is live.</p>
+          <p className="hint">The record reads verified once the repository&apos;s tally.json lists this contract and names the wallet that signed. The panel above shows the file and can check that it is live.</p>
         </div>
       )}
 

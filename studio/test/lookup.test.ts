@@ -3,12 +3,14 @@ import { toFunctionSelector } from "viem";
 import { badgeSvg } from "@/lib/badge";
 import { lookupContract } from "@/lib/lookup";
 import { describe as describeLevel, LEVELS } from "@/lib/status";
-import { addressWord, arcChain, encodeV1, encodeV2, fakeWorld, NONE_V1, NONE_V2, REG_V1, REG_V2, REPO, SIGNER, tallyJson, TARGET } from "./helpers";
+import { EIP1967_BEACON_SLOT, EIP1967_IMPLEMENTATION_SLOT } from "@/lib/proxy";
+import { addressWord, arcChain, encodeV1, encodeV2, fakeWorld, NONE_V1, NONE_V2, REG_V1, REG_V2, REPO, SIGNER, storageBySlot, tallyJson, TARGET } from "./helpers";
 
 const SEL = toFunctionSelector("getRegistration(address)");
 const OWNER = toFunctionSelector("owner()");
 const FILE = "https://raw.githubusercontent.com/acme/vault/HEAD/tally.json";
-const LISTS = tallyJson({ chainId: 5042, address: TARGET });
+const LISTS = tallyJson({ chainId: 5042, address: TARGET, signer: SIGNER });
+const UNBOUND = tallyJson({ chainId: 5042, address: TARGET });
 const both = { ...arcChain, registries: [{ version: 2 as const, address: REG_V2 }, { version: 1 as const, address: REG_V1 }] };
 const v1only = { ...arcChain, registries: [{ version: 1 as const, address: REG_V1 }] };
 const run = (chain: typeof both | typeof v1only | typeof arcChain, world: ReturnType<typeof fakeWorld>) =>
@@ -142,5 +144,112 @@ describe("lookupContract", () => {
     expect(result).toMatchObject({ level: "control-proven", repoLink: null });
     expect(result.ok && result.repo?.status).toBe("invalid-repo");
     expect(world.calls.filter((c) => c.url.includes("raw.githubusercontent"))).toHaveLength(0);
+  });
+});
+
+const IMPL_WORD = addressWord("0x5555555555555555555555555555555555555555");
+const OTHER_OWNER = addressWord("0x9999999999999999999999999999999999999999");
+const rpcBodies = (world: ReturnType<typeof fakeWorld>) => world.calls.map((c) => JSON.parse(String(c.init?.body ?? "{}")));
+const storageCalls = (world: ReturnType<typeof fakeWorld>) => rpcBodies(world).filter((b) => b.method === "eth_getStorageAt");
+const ownerCalls = (world: ReturnType<typeof fakeWorld>) =>
+  rpcBodies(world).filter((b) => b.method === "eth_call" && String(b.params[0].to).toLowerCase() === TARGET.toLowerCase() && String(b.params[0].data).startsWith(OWNER));
+const v2live = { [REG_V2]: { [SEL]: encodeV2() }, [REG_V1]: { [SEL]: NONE_V1() } };
+
+describe("what 'verified' requires", () => {
+  it("a tally.json entry that names no wallet vouches for the address only, so the record stays 'control-proven'", async () => {
+    const result = await run(both, fakeWorld({ rpc: v2live, files: { [FILE]: UNBOUND } }));
+    expect(result.level).toBe("control-proven");
+    expect(result.ok && result.repo).toMatchObject({ status: "confirmed", bound: false });
+    expect(describeLevel(result.level, result.ok ? result.registration : null, result.ok ? result.repo : null)).toMatch(/does not name the wallet/);
+  });
+
+  it("an entry that names the signer's wallet, on a contract that is not a proxy, is 'verified'", async () => {
+    const result = await run(both, fakeWorld({ rpc: v2live, files: { [FILE]: LISTS } }));
+    expect(result).toMatchObject({ ok: true, level: "verified" });
+    expect(result.ok && result.registration?.upgradeable).toBe(false);
+    expect(result.ok && result.repo).toMatchObject({ status: "confirmed", bound: true });
+  });
+
+  it("an EIP-1967 implementation proxy never reaches 'verified', even when the repository names the signer", async () => {
+    const world = fakeWorld({ rpc: { ...v2live, [TARGET]: { eth_getStorageAt: storageBySlot({ [EIP1967_IMPLEMENTATION_SLOT]: IMPL_WORD }) } }, files: { [FILE]: LISTS } });
+    const result = await run(both, world);
+    expect(result.level).toBe("control-proven");
+    expect(result.ok && result.registration?.upgradeable).toBe(true);
+    expect(describeLevel(result.level, result.ok ? result.registration : null, result.ok ? result.repo : null)).toMatch(/upgradeable proxy/);
+  });
+
+  it("a beacon proxy likewise", async () => {
+    const world = fakeWorld({ rpc: { ...v2live, [TARGET]: { eth_getStorageAt: storageBySlot({ [EIP1967_BEACON_SLOT]: IMPL_WORD }) } }, files: { [FILE]: LISTS } });
+    expect((await run(both, world)).level).toBe("control-proven");
+  });
+
+  it("an unreadable proxy slot makes the answer 'unknown', never 'verified'", async () => {
+    for (const reply of [new Error("socket hang up"), { error: { code: -32000, message: "boom" } }, "not hex"]) {
+      const world = fakeWorld({ rpc: { ...v2live, [TARGET]: { eth_getStorageAt: reply as never } }, files: { [FILE]: LISTS } });
+      expect(await run(both, world)).toMatchObject({ ok: false, level: "unknown" });
+    }
+  });
+
+  it("only a live v2 record is probed: stale, self-attested and v1 records cost no storage reads", async () => {
+    for (const rpc of [
+      { [REG_V2]: { [SEL]: encodeV2({ flags: 0 }) }, [REG_V1]: { [SEL]: NONE_V1() } },
+      { [REG_V2]: { [SEL]: encodeV2({ prov: 1, method: 0, flags: 2 }) }, [REG_V1]: { [SEL]: NONE_V1() } },
+      { [REG_V2]: { [SEL]: NONE_V2() }, [REG_V1]: { [SEL]: encodeV1() }, [TARGET]: { [OWNER]: addressWord(SIGNER) } },
+    ]) {
+      const world = fakeWorld({ rpc, files: { [FILE]: LISTS } });
+      await run(both, world);
+      expect(storageCalls(world)).toHaveLength(0);
+    }
+  });
+
+  it("a live record is probed once per slot: two reads", async () => {
+    const world = fakeWorld({ rpc: v2live, files: { [FILE]: LISTS } });
+    await run(both, world);
+    expect(storageCalls(world).map((b) => b.params[1]).sort()).toEqual([EIP1967_BEACON_SLOT, EIP1967_IMPLEMENTATION_SLOT].sort());
+  });
+});
+
+describe("deployer records", () => {
+  const deployerWorld = (owner?: unknown) =>
+    fakeWorld({
+      rpc: { [REG_V2]: { [SEL]: encodeV2({ method: 3 }) }, [REG_V1]: { [SEL]: NONE_V1() }, ...(owner === undefined ? {} : { [TARGET]: { [OWNER]: owner as never } }) },
+      files: { [FILE]: LISTS },
+    });
+
+  it("a contract that now names another owner is stale: the deployer no longer speaks for it", async () => {
+    const result = await run(both, deployerWorld(OTHER_OWNER));
+    expect(result.level).toBe("stale");
+    expect(result.ok && result.registration?.controlCurrent).toBe(false);
+    expect(result.ok && result.repo).toBeNull();
+  });
+
+  it("a deployer who is also the owner is 'verified'", async () => {
+    expect((await run(both, deployerWorld(addressWord(SIGNER)))).level).toBe("verified");
+  });
+
+  it("a contract with no owner() leaves the deployer proof standing", async () => {
+    expect((await run(both, deployerWorld())).level).toBe("verified");
+  });
+
+  it("a renounced owner (zero address) leaves the deployer proof standing", async () => {
+    expect((await run(both, deployerWorld(addressWord("0x0000000000000000000000000000000000000000")))).level).toBe("verified");
+  });
+
+  it("an owner() answer that is not one clean address word reads as 'no owner', like the registry does", async () => {
+    for (const reply of [`0x${"ab".repeat(32)}`, "0x1234", `0x${"00".repeat(40)}`]) {
+      expect((await run(both, deployerWorld(reply))).level, reply).toBe("verified");
+    }
+  });
+
+  it("an owner() that cannot be read makes the answer 'unknown', never a stronger claim", async () => {
+    expect(await run(both, deployerWorld(new TypeError("network down")))).toMatchObject({ ok: false, level: "unknown" });
+  });
+
+  it("owner and admin records are not re-probed: the registry already re-checks them", async () => {
+    for (const method of [1, 2]) {
+      const world = fakeWorld({ rpc: { [REG_V2]: { [SEL]: encodeV2({ method }) }, [REG_V1]: { [SEL]: NONE_V1() } }, files: { [FILE]: LISTS } });
+      await run(both, world);
+      expect(ownerCalls(world), `method ${method}`).toHaveLength(0);
+    }
   });
 });

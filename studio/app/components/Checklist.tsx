@@ -41,25 +41,41 @@ export function buildChecklist(result: Extract<Lookup, { ok: true }>): Row[] {
   const stillHeld: Row =
     reg.controlCurrent === true
       ? { state: "ok", title: "Signer still controls the contract", detail: "Checked just now against the live contract." }
-      : { state: "bad", title: "Signer still controls the contract", detail: "The signer no longer controls this contract. Ownership or admin rights moved." };
+      : reg.method === "DEPLOYER"
+        ? {
+            state: "bad",
+            title: "Signer still controls the contract",
+            detail: "The contract now has an owner other than the deployer who registered it. A deployer speaks for a contract only while nobody else owns it.",
+          }
+        : { state: "bad", title: "Signer still controls the contract", detail: "The signer no longer controls this contract. Ownership or admin rights moved." };
   const code: Row =
     reg.codeCurrent === null
       ? { state: "warn", title: "Code unchanged since registration", detail: "Not tracked: the legacy v1 registry does not record the code hash. Re-register on v2 to track it." }
-      : reg.codeCurrent
-        ? { state: "ok", title: "Code unchanged since registration", detail: "The code hash at this address matches the one recorded." }
-        : { state: "bad", title: "Code unchanged since registration", detail: "The code at this address is different from what was registered." };
+      : !reg.codeCurrent
+        ? { state: "bad", title: "Code unchanged since registration", detail: "The code at this address is different from what was registered." }
+        : reg.upgradeable === true
+          ? {
+              state: "warn",
+              title: "Code unchanged since registration",
+              detail: "The code hash matches, but this contract is an upgradeable proxy. Its logic can change without changing that hash, so this check cannot vouch for it.",
+            }
+          : { state: "ok", title: "Code unchanged since registration", detail: "The code hash at this address matches the one recorded." };
 
   const live = isLive(reg);
   const repo: Row = !live
     ? { state: "na", title: "Repository lists this contract", detail: "Not checked: the proof above no longer holds." }
     : result.repo?.status === "confirmed"
-      ? {
-          state: "ok",
-          title: "Repository lists this contract",
-          detail: result.repo.bound
-            ? "tally.json lists this contract and names the wallet that registered it, so the repository vouches for that wallet."
-            : `${REPO_DETAIL.confirmed} It names no wallet; naming the signer there makes the proof stronger.`,
-        }
+      ? result.repo.bound
+        ? {
+            state: "ok",
+            title: "Repository lists this contract",
+            detail: "tally.json lists this contract and names the wallet that registered it, so the repository vouches for that wallet.",
+          }
+        : {
+            state: "warn",
+            title: "Repository lists this contract",
+            detail: `${REPO_DETAIL.confirmed} It names no wallet, so it does not vouch for the signer. Add "signer": "${reg.signer}" to its entry to make this verified.`,
+          }
       : {
           state: result.repo?.status === "unavailable" ? "warn" : "bad",
           title: "Repository lists this contract",

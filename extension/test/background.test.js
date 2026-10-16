@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("node:path");
-const { root, lib, chains, arc, registryRpc, v1Registry, encodeV1, encodeV2, fakeWorld, tallyJson, TARGET } = require("./helpers");
+const { root, lib, chains, arc, registryRpc, v1Registry, encodeV1, encodeV2, fakeWorld, tallyJson, SIGNER, TARGET } = require("./helpers");
 
 for (const name of ["net.js", "safe-url.js", "registry.js", "repo-proof.js", "status.js", "lookup.js"]) lib(name);
 const registry = lib("registry.js");
@@ -113,7 +113,7 @@ test("a verified record flows all the way through", async () => {
     arc.registries.splice(0, arc.registries.length, { version: 2, address: v2 });
     const world = fakeWorld({
       rpc: { [v2]: { [sel]: encodeV2({ repo: "https://github.com/acme/vault" }) } },
-      files: { [FILE]: tallyJson({ chainId: 5042, address: TARGET }) },
+      files: { [FILE]: tallyJson({ chainId: 5042, address: TARGET, signer: SIGNER }) },
     });
     const result = await background.handleLookup(lookupMsg(), fromArc, world);
     assert.equal(result.level, "verified");

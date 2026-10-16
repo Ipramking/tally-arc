@@ -29,8 +29,12 @@ test("every level has a label, and 'Verified' wording is reserved for verified",
 });
 
 test("describe never claims more than the level", () => {
-  const reg = (extra) => ({ provenance: "CONTROL_PROVEN", registryVersion: 2, controlCurrent: true, codeCurrent: true, ...extra });
-  assert.match(status.describe("verified", reg(), { status: "confirmed" }), /repository lists this contract/);
+  const reg = (extra) => ({ provenance: "CONTROL_PROVEN", registryVersion: 2, controlCurrent: true, codeCurrent: true, upgradeable: false, ...extra });
+  assert.match(status.describe("verified", reg(), { status: "confirmed", bound: true }), /repository lists this contract/);
+  assert.match(status.describe("verified", reg(), { status: "confirmed", bound: true }), /names the signer's wallet/);
+  assert.match(status.describe("control-proven", reg({ upgradeable: true }), { status: "confirmed", bound: true }), /upgradeable proxy/);
+  assert.match(status.describe("control-proven", reg(), { status: "confirmed", bound: false }), /does not name the wallet/);
+  assert.match(status.describe("control-proven", reg(), { status: "confirmed" }), /does not name the wallet/);
   assert.match(status.describe("control-proven", reg(), { status: "not-listed" }), /does not list this contract.*unconfirmed/);
   assert.match(status.describe("control-proven", reg(), { status: "unavailable" }), /could not be checked/);
   assert.match(status.describe("control-proven", reg({ registryVersion: 1 }), { status: "confirmed" }), /legacy v1/);

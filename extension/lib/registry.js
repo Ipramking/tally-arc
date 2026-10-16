@@ -119,6 +119,7 @@
         method: provenance === "CONTROL_PROVEN" ? "OWNER" : "NONE",
         controlCurrent: null,
         codeCurrent: null,
+        upgradeable: null,
         v1Verified: flag5,
       };
     }
@@ -135,6 +136,7 @@
       method,
       controlCurrent: (flags & FLAG_CONTROL_CURRENT) !== 0,
       codeCurrent: (flags & FLAG_CODE_CURRENT) !== 0,
+      upgradeable: null,
     };
   }
 
@@ -201,9 +203,54 @@
     }
   }
 
+  /**
+   * The owner a contract names right now (lowercase), or null when it names none: no owner(), a
+   * revert, an answer that is not one address word, or the zero address. This is the registry's own
+   * reading of owner() (TallyRegistryV2._ownerOf). A network failure throws, never reads as "none".
+   */
+  async function readOwner(chain, target, fetchImpl, timeoutMs) {
+    try {
+      const result = await ethCall(chain.rpcUrl, target, OWNER, fetchImpl, timeoutMs);
+      const data = result.slice(2).toLowerCase();
+      if (data.length !== 64 || !/^0{24}/.test(data) || /^0+$/.test(data)) return null;
+      return "0x" + data.slice(24);
+    } catch (error) {
+      if (error && error.name === "RpcError" && error.revert) return null;
+      throw error;
+    }
+  }
+
+  // bytes32(uint256(keccak256("eip1967.proxy.<name>")) - 1); pinned by test-vectors/proxy-slots.json.
+  const EIP1967_IMPLEMENTATION_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+  const EIP1967_BEACON_SLOT = "0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50";
+  const EMPTY_WORD = "0x" + "0".repeat(64);
+
+  /** One storage slot as a lowercase 64-digit word (some nodes drop leading zeros). */
+  async function getStorageAt(rpcUrl, address, slot, fetchImpl, timeoutMs) {
+    const value = await rpc(rpcUrl, "eth_getStorageAt", [address, slot, "latest"], fetchImpl, timeoutMs);
+    if (!/^0x[0-9a-fA-F]{1,64}$/.test(value)) throw new RpcError("RPC returned malformed storage", false);
+    return "0x" + value.slice(2).toLowerCase().padStart(64, "0");
+  }
+
+  /**
+   * Is the target an upgradeable proxy? A proxy's bytecode never changes when its implementation is
+   * swapped, so the registry's code-hash check cannot see an upgrade and Tally never shows a proxy as
+   * "verified". Detected: EIP-1967 implementation proxies (transparent, UUPS) and beacon proxies.
+   * Not detected: diamonds and hand-rolled proxies. A failed read throws: it must never default to "no".
+   */
+  async function isUpgradeableProxy(chain, target, fetchImpl, timeoutMs) {
+    const [implementation, beacon] = await Promise.all([
+      getStorageAt(chain.rpcUrl, target, EIP1967_IMPLEMENTATION_SLOT, fetchImpl, timeoutMs),
+      getStorageAt(chain.rpcUrl, target, EIP1967_BEACON_SLOT, fetchImpl, timeoutMs),
+    ]);
+    return implementation !== EMPTY_WORD || beacon !== EMPTY_WORD;
+  }
+
   return {
     GET_REGISTRATION,
     OWNER,
+    EIP1967_IMPLEMENTATION_SLOT,
+    EIP1967_BEACON_SLOT,
     DecodeError,
     RpcError,
     encodeGetRegistration,
@@ -212,5 +259,8 @@
     hasCode,
     readRegistry,
     v1ControlCurrent,
+    readOwner,
+    getStorageAt,
+    isUpgradeableProxy,
   };
 });

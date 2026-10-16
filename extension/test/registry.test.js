@@ -33,6 +33,7 @@ test("decodes a v1 owner-proven record", () => {
     method: "OWNER",
     controlCurrent: null,
     codeCurrent: null,
+    upgradeable: null,
     v1Verified: true,
   });
 });
