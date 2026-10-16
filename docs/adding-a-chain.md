@@ -15,7 +15,7 @@ Add an object to `chains`:
   "testnet": false,
   "nativeCurrency": { "name": "Ether", "symbol": "ETH", "decimals": 18 },
   "rpcUrl": "https://rpc.my-chain.example",
-  "explorer": { "name": "My Explorer", "url": "https://explorer.my-chain.example" },
+  "explorer": { "name": "My Explorer", "url": "https://explorer.my-chain.example", "api": "https://explorer.my-chain.example/api" },
   "registries": [],
   "presets": {}
 }
@@ -27,6 +27,7 @@ Add an object to `chains`:
 | `id` | The chain id; unique. |
 | `rpcUrl` | `https` only, no credentials, no query string. Its origin is added to the extension's host permissions and to the studio's `connect-src`. |
 | `explorer.url` | Bare `https` origin, no trailing slash, and **not shared with another chain** (the extension picks the chain from the page's hostname). |
+| `explorer.api` | Optional. An Etherscan-style API (Blockscout answers it) that `hardhat verify` can use to publish the registry's source. Leave it out if the explorer cannot be scripted. |
 | `registries` | Newest first. The first entry receives new registrations; **every** entry is read. `version` is `1` or `2`. |
 | `presets` | Optional `verified` and `unverified` example addresses for the popup and home page. |
 
@@ -40,9 +41,11 @@ npm run chains:sync
 ```
 
 This validates the file, then rewrites `studio/lib/chains.generated.ts`,
-`extension/chains.generated.js` and the generated parts of `extension/manifest.json`
-(`content_scripts[0].matches` and `host_permissions`). Never edit those by hand: CI runs
-`npm run chains:check` and fails if they are out of date.
+`extension/chains.generated.js`, the generated parts of `extension/manifest.json`
+(`content_scripts[0].matches` and `host_permissions`) and [networks.md](networks.md). Never edit those
+by hand: CI runs `npm run chains:check` and fails if they are out of date. CI also runs
+`npm run neutral:check`, which fails if source code names a specific network, so a network fact belongs
+in `chains.json` and nowhere else.
 
 Hardhat reads `chains.json` directly. The network name is the key in camelCase
 (`my-chain` becomes `myChain`), and `MY_CHAIN_RPC_URL` overrides the RPC.
@@ -51,7 +54,7 @@ Hardhat reads `chains.json` directly. The network name is the key in camelCase
 
 ```bash
 cd contracts
-npx hardhat run scripts/deploy.js --network myChain
+npm run deploy -- --network myChain
 ```
 
 Add the printed address to the chain's `registries`, then run `npm run chains:sync` again.
@@ -65,6 +68,22 @@ npm test
 
 Then try it by hand: register a contract on a testnet, publish its `tally.json`, and
 open `/c/<address>?chain=my-chain` in the studio.
+
+## What a chain needs
+
+Tally is for EVM chains. It reads state only through standard JSON-RPC and standard opcodes, so a chain
+works if it offers:
+
+- **RPC methods:** `eth_call`, `eth_getCode`, `eth_getStorageAt`, `eth_getTransactionCount`, `eth_getBlockByNumber`,
+  and `eth_getLogs` for a single block (the provenance history). A public endpoint that rate-limits or
+  blocks any of these shows up as "unavailable" in the clients, never as a wrong answer.
+- **Opcodes:** `EXTCODEHASH`, `STATICCALL` and CREATE address derivation. The contracts are compiled for the
+  `paris` EVM version, so a chain does not need newer opcodes.
+- **Browser access for the register page:** the RPC must allow requests from the studio's origin (CORS), or
+  the register page cannot run its checks. The lookups the studio, the badge API and the extension make
+  do not depend on this.
+- **Explorer links** of the form `/address/0x...` and `/tx/0x...`, which is what Etherscan-style and
+  Blockscout explorers use.
 
 ## Things to know
 

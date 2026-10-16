@@ -8,7 +8,7 @@ export const chains: readonly ChainDef[] = CHAINS;
 
 export const defaultChain: ChainDef = chains.find((c) => c.key === DEFAULT_CHAIN_KEY) ?? chains[0];
 
-/** Resolve `?chain=` (a key like "arc" or a numeric chain id). Missing means the default; unknown means null. */
+/** Resolve `?chain=` (a key from chains.json or a numeric chain id). Missing means the default; unknown means null. */
 export function resolveChain(param: string | string[] | null | undefined): ChainDef | null {
   const value = Array.isArray(param) ? param[0] : param;
   if (value === undefined || value === null || value === "") return defaultChain;
@@ -52,7 +52,7 @@ export function chainHref(pathname: string, search: string, key: string): string
   return `${pathname}?${params.toString()}`;
 }
 
-/** How a chain is named in the UI, for example "Arc Mainnet \u00b7 5042". */
+/** How a chain is named in the UI: its name and chain id, for example "My Chain \u00b7 12345". */
 export function chainLabel(chain: ChainDef): string {
   return `${chain.name} \u00b7 ${chain.id}`;
 }

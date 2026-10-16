@@ -1,9 +1,10 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
 
-// Networks come from the repo-wide chains.json (single source of truth).
-// "arc" -> network `arc`, "arc-testnet" -> `arcTestnet`. Override a chain's RPC
-// with <KEY>_RPC_URL, e.g. ARC_RPC_URL or ARC_TESTNET_RPC_URL.
+// Networks come from the repo-wide chains.json (single source of truth), so a chain added
+// there can be deployed to and verified on with no change here. A chain's key becomes its
+// Hardhat network name in camelCase ("my-chain" -> `myChain`); override its RPC with
+// <KEY>_RPC_URL ("my-chain" -> MY_CHAIN_RPC_URL).
 const { chains } = require("../chains.json");
 
 const accounts = process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [];
@@ -20,15 +21,11 @@ for (const chain of chains) {
   };
 }
 
-// Source verification. Blockscout explorers answer the Etherscan-style /api that
-// hardhat-verify speaks. Arc's explorer sits behind a bot challenge that a script
-// cannot pass, so it is deliberately not listed. Add a chain here once its explorer
-// is known to accept verification (then `npx hardhat verify --network <name> <address>`).
-const VERIFY_API = {
-  "bot-testnet": { api: "https://scan.bohr.life/api", browser: "https://scan.bohr.life" },
-  bot: { api: "https://scan.botchain.ai/api", browser: "https://scan.botchain.ai" },
-};
-const verifiable = chains.filter((chain) => VERIFY_API[chain.key]);
+// Source verification. A chain whose explorer.api is set in chains.json (an Etherscan-style
+// /api, which Blockscout explorers answer and hardhat-verify speaks) can be verified with
+// `npx hardhat verify --network <name> <address>`. Leave `api` out for an explorer a script
+// cannot reach (for example one behind a bot challenge); verify through its web form.
+const verifiable = chains.filter((chain) => chain.explorer && chain.explorer.api);
 
 /** @type {import('hardhat/config').HardhatUserConfig} */
 module.exports = {
@@ -47,7 +44,7 @@ module.exports = {
     customChains: verifiable.map((chain) => ({
       network: camel(chain.key),
       chainId: chain.id,
-      urls: { apiURL: VERIFY_API[chain.key].api, browserURL: VERIFY_API[chain.key].browser },
+      urls: { apiURL: chain.explorer.api, browserURL: chain.explorer.url },
     })),
   },
   sourcify: { enabled: false },

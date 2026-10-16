@@ -3,8 +3,10 @@ const { findChain, explorerAddress } = require("./lib");
 
 // Deploys a Tally registry.
 //
-//   npx hardhat run scripts/deploy.js --network arcTestnet
-//   CONTRACT=TallyRegistry npx hardhat run scripts/deploy.js --network arc   (legacy v1)
+//   npx hardhat run scripts/deploy.js --network <name>
+//   CONTRACT=TallyRegistry npx hardhat run scripts/deploy.js --network <name>   (legacy v1)
+//
+// <name> is a chain key from chains.json in camelCase ("my-chain" -> myChain).
 //
 // Defaults to TallyRegistryV2. Add the printed registry to chains.json
 // (newest first) and run `npm run chains:sync` from the repo root.

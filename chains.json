@@ -1,5 +1,5 @@
 {
-  "$comment": "Single source of truth for every chain Tally supports. Edit this file, then run `npm run chains:sync` (writes studio/lib/chains.generated.ts, extension/chains.generated.js and the extension manifest host lists). Hardhat reads it directly. `registries` is ordered newest first: the first entry receives writes, all entries are read (newest wins). See docs/adding-a-chain.md.",
+  "$comment": "Single source of truth for every chain Tally supports. Edit this file, then run `npm run chains:sync` (writes studio/lib/chains.generated.ts, extension/chains.generated.js, the extension manifest host lists and docs/networks.md). Hardhat reads it directly. `registries` is ordered newest first: the first entry receives writes, all entries are read (newest wins). `explorer.api` is optional: an Etherscan-compatible API (Blockscout answers it) that `hardhat verify` can use. `defaultChain` only decides what a link without ?chain= means. See docs/adding-a-chain.md.",
   "studioUrl": "https://tally-studio.vercel.app",
   "defaultChain": "arc",
   "chains": [
@@ -38,7 +38,7 @@
       "testnet": true,
       "nativeCurrency": { "name": "BOT", "symbol": "BOT", "decimals": 18 },
       "rpcUrl": "https://rpc.bohr.life",
-      "explorer": { "name": "Bohr Explorer", "url": "https://scan.bohr.life" },
+      "explorer": { "name": "Bohr Explorer", "url": "https://scan.bohr.life", "api": "https://scan.bohr.life/api" },
       "registries": [
         { "version": 2, "address": "0x5F514879a3B1fD39e47299706031F6D85c8c9C90" }
       ],

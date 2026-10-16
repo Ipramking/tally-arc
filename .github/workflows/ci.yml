@@ -23,6 +23,8 @@ jobs:
         with:
           node-version: 22
       - run: node scripts/sync-chains.mjs --check
+      - name: No network is special-cased in source
+        run: node scripts/check-neutral.mjs
 
   contracts:
     name: Contracts

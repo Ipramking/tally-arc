@@ -4,7 +4,7 @@ const { explorerAddress } = require("./lib");
 // Deploys a tiny Ownable target (OwnableTarget) owned by the deployer, so you
 // can register it and see a control-proven record end to end.
 //
-//   npx hardhat run scripts/deploy-demo.js --network arcTestnet
+//   npx hardhat run scripts/deploy-demo.js --network <name>
 async function main() {
   const [deployer] = await ethers.getSigners();
   if (!deployer) throw new Error("No deployer account. Set DEPLOYER_PRIVATE_KEY in contracts/.env");

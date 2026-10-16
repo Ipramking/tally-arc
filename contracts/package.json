@@ -8,11 +8,7 @@
     "test": "hardhat test",
     "deploy": "hardhat run scripts/deploy.js",
     "deploy:demo": "hardhat run scripts/deploy-demo.js",
-    "register": "hardhat run scripts/register.js",
-    "deploy:arc": "hardhat run scripts/deploy.js --network arc",
-    "deploy:arcTestnet": "hardhat run scripts/deploy.js --network arcTestnet",
-    "deploy:demo:arc": "hardhat run scripts/deploy-demo.js --network arc",
-    "deploy:demo:arcTestnet": "hardhat run scripts/deploy-demo.js --network arcTestnet"
+    "register": "hardhat run scripts/register.js"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",

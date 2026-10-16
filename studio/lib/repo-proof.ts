@@ -1,7 +1,7 @@
 // Confirms the off-chain half of "verified": the repository must list the
 // contract in a tally.json at its root.
 //
-//   { "version": 1, "contracts": [ { "chainId": 5042, "address": "0x..." } ] }
+//   { "version": 1, "contracts": [ { "chainId": 12345, "address": "0x...", "signer": "0x..." } ] }
 //
 // The on-chain record says "this signer controls the contract and claims this
 // repository". Only the repository can say "yes, this contract is ours".

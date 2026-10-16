@@ -8,6 +8,7 @@
 //   studio/lib/chains.generated.ts     typed chain table for the Next.js studio
 //   extension/chains.generated.js      chain table for the browser extension
 //   extension/manifest.json            ONLY content_scripts[0].matches and host_permissions
+//   docs/networks.md                   the list of supported networks and their registries
 //
 // Hardhat reads chains.json directly, so it needs no generated file.
 
@@ -71,6 +72,7 @@ function validate(config) {
     httpsOrigin(chain.rpcUrl, `${where}: rpcUrl`, { pathAllowed: true });
     if (typeof chain.explorer?.name !== "string") fail(`${where}: explorer.name is required`);
     const explorerOrigin = httpsOrigin(chain.explorer.url, `${where}: explorer.url`, { pathAllowed: false }).origin;
+    if (chain.explorer.api !== undefined) httpsOrigin(chain.explorer.api, `${where}: explorer.api`, { pathAllowed: true });
     // Two chains sharing an explorer origin would make the extension's
     // hostname -> chain lookup ambiguous.
     if (origins.has(explorerOrigin)) fail(`${where}: explorer ${explorerOrigin} is already used by another chain`);
@@ -183,6 +185,34 @@ function renderManifest(data, existing) {
   return formatJson(manifest) + "\n";
 }
 
+const short = (address) => `${address.slice(0, 6)}…${address.slice(-4)}`;
+
+function renderNetworks(data, config) {
+  const rows = data.chains.map((chain) => {
+    const source = config.chains.find((c) => c.key === chain.key);
+    const registries = chain.registries.length
+      ? chain.registries.map((r) => `v${r.version} [\`${short(r.address)}\`](${chain.explorer.url}/address/${r.address})`).join("<br>")
+      : "none yet";
+    const example = chain.presets.verified ? `[\`${short(chain.presets.verified)}\`](${data.studioUrl}/c/${chain.presets.verified}?chain=${chain.key})` : "";
+    const verify = source.explorer.api ? "`hardhat verify`" : "explorer web form";
+    return `| ${chain.name} | ${chain.testnet ? "testnet" : "mainnet"} | \`${chain.key}\` | ${chain.id} | ${chain.nativeCurrency.symbol} | [${chain.explorer.name}](${chain.explorer.url}) | ${registries} | ${example} | ${verify} |`;
+  });
+  return `<!-- ${BANNER} -->
+
+# Networks
+
+Every network Tally reads, from [\`chains.json\`](../chains.json). A network with a registry can have contracts
+registered and looked up; one without can only be looked up, and the answer says no registry is deployed there.
+Links without \`?chain=\` mean \`${data.defaultChain}\`.
+
+| Network | Type | Key | Chain ID | Gas token | Explorer | Registries (newest first) | Example verified contract | Source verification |
+|---|---|---|---|---|---|---|---|---|
+${rows.join("\n")}
+
+Tally works on any EVM chain. To add yours, see [adding-a-chain.md](adding-a-chain.md).
+`;
+}
+
 const config = JSON.parse(readFileSync(join(root, "chains.json"), "utf8"));
 validate(config);
 const data = normalize(config);
@@ -192,6 +222,7 @@ const outputs = [
   [join(root, "studio/lib/chains.generated.ts"), renderStudio(data)],
   [join(root, "extension/chains.generated.js"), renderExtension(data)],
   [manifestPath, renderManifest(data, readFileSync(manifestPath, "utf8"))],
+  [join(root, "docs/networks.md"), renderNetworks(data, config)],
 ];
 
 let stale = 0;

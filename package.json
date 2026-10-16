@@ -7,9 +7,10 @@
   "scripts": {
     "chains:sync": "node scripts/sync-chains.mjs",
     "chains:check": "node scripts/sync-chains.mjs --check",
+    "neutral:check": "node scripts/check-neutral.mjs",
     "test:contracts": "npm --prefix contracts test",
     "test:studio": "npm --prefix studio test",
     "test:extension": "npm --prefix extension test",
-    "test": "npm run chains:check && npm run test:contracts && npm run test:studio && npm run test:extension"
+    "test": "npm run chains:check && npm run neutral:check && npm run test:contracts && npm run test:studio && npm run test:extension"
   }
 }

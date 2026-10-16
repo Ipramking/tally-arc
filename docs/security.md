@@ -107,7 +107,7 @@ repository. So "verified" additionally requires the repository to agree.
 The repository publishes `tally.json` at its root, on the default branch:
 
 ```json
-{ "version": 1, "contracts": [ { "chainId": 5042, "address": "0x...", "signer": "0x..." } ] }
+{ "version": 1, "contracts": [ { "chainId": 12345, "address": "0x...", "signer": "0x..." } ] }
 ```
 
 `signer` names the wallet the repository authorises to register that contract, and **verified

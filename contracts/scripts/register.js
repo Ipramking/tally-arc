@@ -4,7 +4,9 @@ const { detectMethod } = require("./lib");
 // CLI relayer: sign a registration and submit it. Mirrors the studio, headless.
 //
 //   REGISTRY=0x… TARGET=0x… REPO=https://github.com/you/proj \
-//     npx hardhat run scripts/register.js --network arcTestnet
+//     npx hardhat run scripts/register.js --network <name>
+//
+// REPO is required: it is the repository the record will name, so there is no default.
 //
 // Optional:
 //   VERSION=1|2          registry version (default 2)
@@ -21,10 +23,10 @@ const LEVELS = ["NONE", "SELF_ATTESTED", "CONTROL_PROVEN"];
 async function main() {
   const registryAddr = process.env.REGISTRY;
   const target = process.env.TARGET;
-  const repo = process.env.REPO || "https://github.com/Ipramking/tally-arc";
+  const repo = process.env.REPO;
   const buildHash = process.env.BUILD_HASH || "";
   const version = Number(process.env.VERSION || 2);
-  if (!registryAddr || !target) throw new Error("Set REGISTRY and TARGET env vars.");
+  if (!registryAddr || !target || !repo) throw new Error("Set REGISTRY, TARGET and REPO env vars.");
 
   const [signer] = await ethers.getSigners();
   const net = await ethers.provider.getNetwork();

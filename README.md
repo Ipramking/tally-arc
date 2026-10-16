@@ -14,9 +14,13 @@ independent things agree:
 3. **Source**: the repository's `tally.json` lists this contract on this network and names the wallet that registered it.
 
 An upgradeable proxy is never shown as verified, because its code hash does not change when its implementation does.
-Anything less is labelled for what it is. Built for [Arc](https://arc.io), where
-gas is paid in USDC and a bad approval costs real dollars; it works on any EVM chain
-you add to [`chains.json`](chains.json).
+Anything less is labelled for what it is.
+
+Tally is chain-neutral. It works on any EVM chain, and a network is one entry in
+[`chains.json`](chains.json): the studio, the extension and the deploy scripts all read it, and CI fails if
+source code names a specific network. It is live today on Arc and on BOT Chain's Bohr testnet.
+[docs/networks.md](docs/networks.md) lists every network with its registry addresses and an example
+verified contract, and [docs/adding-a-chain.md](docs/adding-a-chain.md) shows how to add yours.
 
 **Studio:** https://tally-studio.vercel.app
 
@@ -24,10 +28,8 @@ you add to [`chains.json`](chains.json).
 
 | | |
 |---|---|
-| Registry **v2** on Arc mainnet (chain 5042) | [`0xd3F1D46675DE21FD3e15D42214d5C67a77631203`](https://explorer.arc.io/address/0xd3F1D46675DE21FD3e15D42214d5C67a77631203). Deployed 2026-10-15 ([`TallyRegistryV2.sol`](contracts/contracts/TallyRegistryV2.sol)), immutable, no owner. Takes every new registration and is the only registry that can reach **verified**. See [docs/deploy-v2.md](docs/deploy-v2.md). |
-| Registry **v1** on Arc mainnet (chain 5042) | [`0x459Cab32306c439a408cA6b8672CcF6c6A0536d9`](https://explorer.arc.io/address/0x459Cab32306c439a408cA6b8672CcF6c6A0536d9). Deployed and immutable. Still read by every client, capped at **control proven** (it cannot see code changes). |
-| Registry **v2** on BOT Chain Testnet (Bohr, chain 968) | [`0x5F514879a3B1fD39e47299706031F6D85c8c9C90`](https://scan.bohr.life/address/0x5F514879a3B1fD39e47299706031F6D85c8c9C90#code), source verified on the explorer. |
-| Demo contract | [`0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb`](https://explorer.arc.io/address/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb), registered on v2 and listed in this repo's [`tally.json`](tally.json) |
+| Registry | **v2** ([`TallyRegistryV2.sol`](contracts/contracts/TallyRegistryV2.sol)) is immutable, has no owner, and is the only registry that can reach **verified**. The original **v1** is still read where it was deployed and is capped at **control proven** (it cannot see code changes). Deployed registries: [docs/networks.md](docs/networks.md). Deploying another: [docs/deploy-v2.md](docs/deploy-v2.md). |
+| This repository's contracts | Listed in [`tally.json`](tally.json), the file this project uses to prove its own demo contracts. |
 | External audit | None yet. See [docs/security.md](docs/security.md) for what has and has not been checked. |
 
 ## Trust levels
@@ -53,11 +55,11 @@ what you see is what the chain supports.
 | [`extension/`](extension) | Manifest V3 Chrome extension: badges on the block explorer and a lookup popup |
 | [`chains.json`](chains.json) | The single source of truth for networks and registry addresses |
 | [`tally.json`](tally.json) | This repository's own provenance file (see below) |
-| [`docs/`](docs) | [Security model](docs/security.md), [deploying v2](docs/deploy-v2.md), [adding a chain](docs/adding-a-chain.md) |
-| [`scripts/`](scripts) | `sync-chains.mjs`, which generates the studio and extension config from `chains.json` |
+| [`docs/`](docs) | [Security model](docs/security.md), [networks](docs/networks.md), [deploying a registry](docs/deploy-v2.md), [adding a chain](docs/adding-a-chain.md) |
+| [`scripts/`](scripts) | `sync-chains.mjs`, which generates the studio and extension config and the network list from `chains.json`, and `check-neutral.mjs`, which keeps source code free of network-specific names |
 | [`test-vectors/`](test-vectors) | Decision-rule vectors shared by the studio and extension tests, so both apply the same trust rules |
 | [`brand/`](brand) | Logo, icon and colour tokens (SVG and PNG) |
-| [`SUBMISSION.md`](SUBMISSION.md) | Project summary text used for grant applications |
+| [`SUBMISSION.md`](SUBMISSION.md) | The text of this project's Arc Microgrants application |
 
 ## Using Tally
 
@@ -73,24 +75,27 @@ registered, on the default branch:
 {
   "version": 1,
   "contracts": [
-    { "chainId": 5042, "address": "0xYourContract", "signer": "0xTheWalletThatRegistered" }
+    { "chainId": 12345, "address": "0xYourContract", "signer": "0xTheWalletThatRegistered" }
   ]
 }
 ```
 
-Clients read it from `https://raw.githubusercontent.com/<owner>/<repo>/HEAD/tally.json`.
-Without the file, or without `signer`, a record stays at **control proven**. The register page
-shows the exact file to publish, signer included.
+`chainId` is the network's chain id (see [docs/networks.md](docs/networks.md)). Clients read the file from
+`https://raw.githubusercontent.com/<owner>/<repo>/HEAD/tally.json`. Without the file, or without
+`signer`, a record stays at **control proven**. The register page shows the exact file to publish,
+signer included.
 
 **Add a badge to your README.**
 
 ```markdown
-![Tally](https://tally-studio.vercel.app/api/badge/0xYourContract?chain=arc)
+![Tally](https://tally-studio.vercel.app/api/badge/0xYourContract?chain=<network-key>)
 ```
+
+Network keys are listed in [docs/networks.md](docs/networks.md).
 
 **Install the extension.** There is no store listing yet. Open `chrome://extensions`,
 turn on Developer mode, choose **Load unpacked**, and select the [`extension/`](extension)
-folder. Visit any address page on the Arc explorer, or use the toolbar popup to look
+folder. Visit any address page on a supported explorer, or use the toolbar popup to look
 up an address.
 
 ## Development
@@ -100,7 +105,7 @@ Node 22.12 or newer. Each package installs its own dependencies.
 ```bash
 npm --prefix contracts ci && npm --prefix studio ci && npm --prefix extension ci
 
-npm test                  # chain-table check, then contracts, studio and extension tests
+npm test                  # chain-table and neutrality checks, then contracts, studio and extension tests
 npm run chains:sync       # regenerate client config after editing chains.json
 npm --prefix studio run dev   # http://localhost:3000
 ```

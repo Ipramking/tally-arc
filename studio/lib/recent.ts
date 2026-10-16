@@ -4,7 +4,7 @@
 import { isAddress, parseGithubRepo } from "./safe-url";
 
 export interface RecentRegistration {
-  /** Chain key from chains.json, for example "arc" or "bot-testnet". */
+  /** Chain key from chains.json, for example "my-chain". */
   chain: string;
   target: string;
   /** Canonical https://github.com/owner/repo link. */
