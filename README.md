@@ -55,13 +55,16 @@ what you see is what the chain supports.
 | [`extension/`](extension) | Manifest V3 Chrome extension: badges on the block explorer and a lookup popup |
 | [`chains.json`](chains.json) | The single source of truth for networks and registry addresses |
 | [`tally.json`](tally.json) | This repository's own provenance file (see below) |
-| [`docs/`](docs) | [Security model](docs/security.md), [networks](docs/networks.md), [deploying a registry](docs/deploy-v2.md), [adding a chain](docs/adding-a-chain.md) |
+| [`docs/`](docs) | [Integrating Tally](docs/integrating.md), [security model](docs/security.md), [networks](docs/networks.md), [deploying a registry](docs/deploy-v2.md), [adding a chain](docs/adding-a-chain.md) |
 | [`scripts/`](scripts) | `sync-chains.mjs`, which generates the studio and extension config and the network list from `chains.json`, and `check-neutral.mjs`, which keeps source code free of network-specific names |
 | [`test-vectors/`](test-vectors) | Decision-rule vectors shared by the studio and extension tests, so both apply the same trust rules |
 | [`brand/`](brand) | Logo, icon and colour tokens (SVG and PNG) |
 | [`SUBMISSION.md`](SUBMISSION.md) | The text of this project's Arc Microgrants application |
 
 ## Using Tally
+
+Building Tally into a project or a product (registering, the JSON API, the library, adding a network, trying it for
+real) is covered in [docs/integrating.md](docs/integrating.md). The short version:
 
 **Register a contract.** Open the studio's [register page](https://tally-studio.vercel.app/register),
 connect the wallet that controls the contract, and sign one EIP-712 message. The

@@ -55,27 +55,26 @@ export interface LookupJson {
 
 export function lookupJson(chain: ChainDef, address: string, result: Lookup): LookupJson {
   const checksummed = getAddress(address);
-  const base = {
-    schema: SCHEMA_VERSION,
-    chain: { key: chain.key, id: chain.id, name: chain.name },
-    address: checksummed,
-    links: {
-      record: `${STUDIO_URL}/c/${checksummed}?chain=${chain.key}`,
-      badge: `${STUDIO_URL}/api/badge/${checksummed}?chain=${chain.key}`,
-      explorer: explorerAddressUrl(chain, checksummed),
-    },
-  } as const;
+  const chainInfo = { key: chain.key, id: chain.id, name: chain.name };
+  const links = {
+    record: `${STUDIO_URL}/c/${checksummed}?chain=${chain.key}`,
+    badge: `${STUDIO_URL}/api/badge/${checksummed}?chain=${chain.key}`,
+    explorer: explorerAddressUrl(chain, checksummed),
+  };
 
   if (!result.ok) {
     return {
-      ...base,
+      schema: SCHEMA_VERSION,
       ok: false,
       level: "unknown",
       label: LEVELS.unknown.label,
       summary: describe("unknown"),
+      chain: chainInfo,
+      address: checksummed,
       registration: null,
       repository: null,
       repoCheck: null,
+      links,
       error: displayText(result.error, 200),
     };
   }
@@ -83,11 +82,13 @@ export function lookupJson(chain: ChainDef, address: string, result: Lookup): Lo
   const record = result.registration;
   const parsed = record ? parseGithubRepo(record.githubRepo) : null;
   return {
-    ...base,
+    schema: SCHEMA_VERSION,
     ok: true,
     level: result.level,
     label: LEVELS[result.level].label,
     summary: describe(result.level, record, result.repo),
+    chain: chainInfo,
+    address: checksummed,
     registration:
       record && record.provenance !== "NONE"
         ? {
@@ -105,5 +106,6 @@ export function lookupJson(chain: ChainDef, address: string, result: Lookup): Lo
         : null,
     repository: parsed ? { url: parsed.url, owner: parsed.owner, repo: parsed.repo } : null,
     repoCheck: result.repo ? { status: result.repo.status, bound: result.repo.status === "confirmed" ? result.repo.bound === true : null, tallyJson: result.repo.url ?? null } : null,
+    links,
   };
 }
