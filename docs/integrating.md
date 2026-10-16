@@ -109,17 +109,48 @@ demo contract on Arc:
 
 ### Use the library
 
-The extension's lookup code is dependency-free JavaScript (MIT) that runs in a browser or in Node 22 with a global
-`fetch`. Copy `extension/lib/*.js` and `extension/chains.generated.js` into your project:
+[`sdk/`](../sdk) is `tally-provenance`: the same lookup code the studio's rules are tested against, dependency-free
+and typed, for Node 20+ and bundlers. It is ready to publish and **not on npm yet**; from a checkout of this
+repository, `require("./sdk")` works.
 
 ```js
-const chains = require("./extension/chains.generated.js");
-const { lookup } = require("./extension/lib/lookup.js");
+const { lookup, getChain } = require("tally-provenance");
 
-const chain = chains.chains.find((c) => c.key === "my-chain");
-const r = await lookup({ chain, address, fetchImpl: fetch, timeoutMs: 15000 });
+const chain = getChain("my-chain"); // from the bundled table, by key or chain id; or pass your own chain object
+const r = await lookup({ chain, address, timeoutMs: 15000 });
 // r.ok, r.level, r.registration, r.repo, r.error
 ```
+
+`lookup` takes any chain object (`key`, `id`, `name`, an https `rpcUrl`, `registries`), so a network the bundled table
+does not list works too. See [`sdk/README.md`](../sdk/README.md).
+
+### Check `tally.json` in CI
+
+`tally-verify` (in the same package) and the GitHub Action fail a build when a repository's `tally.json` and the chain
+disagree: a listed contract with no record, a record naming another repository or another wallet, a record that went
+stale after an upgrade or a hand-over, or an entry without `signer`. A proxy, a legacy-registry record and a
+self-attested record are warnings (failures with `strict`). The file is judged as it is in the checkout, so a pull
+request that edits `tally.json` is checked with its own edit.
+
+```yaml
+# .github/workflows/tally.yml
+on:
+  push:
+    paths: [tally.json]
+  schedule:
+    - cron: "17 6 * * 1" # weekly: a record goes stale after an upgrade nobody re-registered
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Ipramking/tally-arc@v1
+```
+
+Exit codes: `0` all good, `1` a record and the file disagree, `2` the chain could not be read (never a pass).
+This repository runs the same action on its own `tally.json`.
 
 ### Read the registry from a contract
 
@@ -146,7 +177,8 @@ A sensible order, each step cheap and reversible until the last:
 3. **Pilot on mainnet.** Register one or two of your own contracts. It costs one transaction each. Records and their
    history are public and permanent (a revoke removes the current record, not the history), and the registry has not
    been audited, so describe the badge as provenance, never as a safety rating.
-4. **Wire it in.** Call the API from your wallet, explorer or dapp, and add the badge to your READMEs.
+4. **Wire it in.** Call the API from your wallet, explorer or dapp, add the badge to your READMEs, and run the
+   GitHub Action so a record that goes stale after an upgrade fails a build instead of being found by a user.
 
 Known limits (proxies beyond EIP-1967, what "control" means, repository identity) are listed in
 [security.md](security.md#7-what-is-not-covered).
