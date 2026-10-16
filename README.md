@@ -53,6 +53,10 @@ what you see is what the chain supports.
 | [`chains.json`](chains.json) | The single source of truth for networks and registry addresses |
 | [`tally.json`](tally.json) | This repository's own provenance file (see below) |
 | [`docs/`](docs) | [Security model](docs/security.md), [deploying v2](docs/deploy-v2.md), [adding a chain](docs/adding-a-chain.md) |
+| [`scripts/`](scripts) | `sync-chains.mjs`, which generates the studio and extension config from `chains.json` |
+| [`test-vectors/`](test-vectors) | Decision-rule vectors shared by the studio and extension tests, so both apply the same trust rules |
+| [`brand/`](brand) | Logo, icon and colour tokens (SVG and PNG) |
+| [`SUBMISSION.md`](SUBMISSION.md) | Project summary text used for grant applications |
 
 ## Using Tally
 

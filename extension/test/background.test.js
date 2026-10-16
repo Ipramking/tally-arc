@@ -57,7 +57,7 @@ test("the chain comes from the sender's page, never from the message", async () 
   assert.equal(world.calls.length, 0, "arc-testnet has no registry, so nothing is queried and the message's chain is ignored");
 });
 
-test("RPC failure becomes an 'unknown' answer with an honest sentence", async () => {
+test("RPC failure becomes an 'unknown' answer with a plain sentence", async () => {
   const world = fakeWorld({ rpc: rpcWith({ [REG_V1]: new TypeError("network down") }) });
   const result = await background.handleLookup(lookupMsg(), fromArc, world);
   assert.equal(result.ok, false);

@@ -61,7 +61,7 @@ On Arc mainnet (chain ID 5042):
 - Clients treat every registry and repository string as hostile input: strict link parsing,
   text-only rendering, a nonce-based Content-Security-Policy, and a failure to read the chain
   shows "unavailable" rather than a misleading "unverified".
-- Honest status: v2 is deployed on Arc mainnet (and on BOT Chain's Bohr testnet) but has not had an external
+- Status: v2 is deployed on Arc mainnet (and on BOT Chain's Bohr testnet) but has not had an external
   audit.
 
 ## What's next
@@ -77,5 +77,5 @@ On Arc mainnet (chain ID 5042):
 - Demo contract: `0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb`
 
 ## Payout wallet
-Provide a fresh, secure wallet that can receive USDC on Arc. Do not use the deployer wallet
-from development.
+Given directly in each grant form: a fresh wallet that can receive USDC on Arc, separate
+from the wallet used for deployment.

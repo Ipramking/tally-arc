@@ -1,6 +1,6 @@
 // The registry contracts are the source of truth; the studio (TypeScript) and the
 // extension (plain JS) are written by hand against them. These tests keep the
-// clients honest by checking the studio's ABIs, the studio's EIP-712 types and
+// clients in step with the contracts by checking the studio's ABIs, its EIP-712 types and
 // the extension's byte-level decoder against the REAL compiled contracts.
 //
 //   - every signature the studio declares must exist on the contract, with the
