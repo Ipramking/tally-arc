@@ -1,5 +1,5 @@
 require("@nomicfoundation/hardhat-toolbox");
-require("dotenv").config();
+require("dotenv").config({ quiet: true });
 
 // Networks come from the repo-wide chains.json (single source of truth), so a chain added
 // there can be deployed to and verified on with no change here. A chain's key becomes its

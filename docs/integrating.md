@@ -46,8 +46,14 @@ After that the record reads **Tally Verified**. Three things will move it back, 
 **From a script:** `REGISTRY=0x... TARGET=0x... REPO=https://github.com/you/project npm run register -- --network <name>`
 from `contracts/`. It needs the wallet's key in `contracts/.env`, so keep it out of CI.
 
-**Multisig or smart-account owners:** the registry accepts ERC-1271 signatures, so a smart account can be the owner and
-the signer. That path is covered by contract tests with a smart-account mock.
+**Multisig or smart-account owners:** the registry accepts ERC-1271 signatures, so a Safe or another smart account can be
+the owner and the signer. The contract path is tested against the real Safe v1.4.1 contracts
+([`contracts/test/safe.test.js`](../contracts/test/safe.test.js)): a 2-of-3 Safe registers a contract it owns, relayed by an
+account that is not an owner. The recipe: build the claim, take its digest from `registry.hashClaim(claim)`, have the
+owners sign the Safe message for that digest, concatenate their signatures in ascending owner-address order, and let any
+account call `register(claim, signature)`. What has **not** been tried is doing this through the studio's register page
+with a live Safe connected over WalletConnect; the page signs with the connected wallet, and whether a Safe returns its
+signature to a dapp in time depends on the Safe client.
 
 ## 3. Show the answer in your product
 

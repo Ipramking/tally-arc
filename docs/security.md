@@ -62,7 +62,7 @@ attacker (or the maintainer) to take over.
 
 | Property | How |
 |---|---|
-| Who can register | Anyone can relay; the **signer** must authorise with an EIP-712 signature. ERC-1271 is supported, so Safes and smart accounts can register. |
+| Who can register | Anyone can relay; the **signer** must authorise with an EIP-712 signature. ERC-1271 is supported, so Safes and smart accounts can register; this is tested against the real Safe v1.4.1 contracts ([`safe.test.js`](../contracts/test/safe.test.js)). |
 | Control is proven on-chain | `OWNER` (`owner() == signer`), `ADMIN_ROLE` (`hasRole(DEFAULT_ADMIN_ROLE, signer)`) or `DEPLOYER` (`CREATE(signer, nonce) == target`). A declared proof that fails **reverts**; it is never silently downgraded. |
 | No self-attesting a controlled contract | A claim with no proof reverts `ControllerExists` if the contract has an `owner()`. |
 | Squatters cannot lock anyone out | Updates are rank based (owner/admin 3, deployer 2, self-attested 1). The strongest *live* claim wins, and a record whose code changed counts as nothing. So a squatter cannot lock out an owner, an admin or a deployer. The one exception, a contract nobody can prove control of, is listed in section 7. v1 had no such rule (V1-2 below). |
