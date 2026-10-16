@@ -15,9 +15,14 @@ function getChain(keyOrId, chains = table.chains) {
   return chains.find((chain) => chain.key === wanted || String(chain.id) === wanted) ?? null;
 }
 
+/** lookup() with the defaults the types promise: the global fetch and a 15 second timeout. */
+function lookup(options) {
+  return lookupLib.lookup({ ...options, fetchImpl: options.fetchImpl ?? globalThis.fetch, timeoutMs: options.timeoutMs ?? 15000 });
+}
+
 module.exports = {
   /** lookup({ chain, address, fetchImpl?, timeoutMs? }) -> { ok, level, registration, repo, repoLink } | { ok: false, level: "unknown", error } */
-  lookup: lookupLib.lookup,
+  lookup,
   /** One plain sentence for a level. */
   describe: status.describe,
   /** Fixed wording for every level: { label, short }. */

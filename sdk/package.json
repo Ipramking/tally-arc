@@ -1,6 +1,6 @@
 {
   "name": "tally-provenance",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Ask whether a smart contract's source is vouched for, on any EVM chain. A Tally lookup library and a CI check that tally.json agrees with the chain.",
   "license": "MIT",
   "keywords": ["tally", "provenance", "smart-contracts", "evm", "verification", "ci", "supply-chain"],

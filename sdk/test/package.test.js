@@ -15,6 +15,27 @@ test("the public API is what the types and the README promise", () => {
   for (const name of names) assert.match(types, new RegExp(`export (function|const) ${name}\\b`), `${name} is typed`);
 });
 
+test("lookup uses the global fetch and a default timeout when none is given, as the types promise", async () => {
+  const { arc, lib, encodeV2, encodeNone, registryRpc, fakeWorld, TARGET } = require("../../extension/test/helpers");
+  const sel = lib("registry.js").GET_REGISTRATION;
+  const REG = "0x4444444444444444444444444444444444444444";
+  const chain = { ...arc, key: "test-chain", id: 31337, name: "Test Chain", registries: [{ version: 2, address: REG }] };
+  const world = fakeWorld({ rpc: registryRpc(chain, sel, { [REG]: encodeV2() }) });
+  const original = globalThis.fetch;
+  globalThis.fetch = world;
+  try {
+    const result = await api.lookup({ chain, address: TARGET });
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(result.level, "control-proven", "a registered contract whose repository is not checked here");
+    assert.ok(world.calls.length > 0, "it went through the global fetch");
+
+    const quiet = fakeWorld({ rpc: registryRpc(chain, sel, { [REG]: encodeNone(2) }) });
+    assert.equal((await api.lookup({ chain, address: TARGET, fetchImpl: quiet })).level, "unverified", "an explicit fetchImpl still wins");
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
 test("getChain finds a chain by key or by id, and says null otherwise", () => {
   const first = api.chains[0];
   assert.equal(api.getChain(first.key), first);
