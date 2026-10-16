@@ -20,3 +20,6 @@ Thumbs.db
 
 # brand tooling font (open-licence, downloaded on demand)
 brand/PlexMono-SemiBold.ttf
+
+# built extension packages
+extension/dist/

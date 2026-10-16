@@ -57,7 +57,7 @@ what you see is what the chain supports.
 | [`action.yml`](action.yml) | A GitHub Action that runs `tally-verify`: it fails the build when `tally.json` and the on-chain records disagree |
 | [`chains.json`](chains.json) | The single source of truth for networks and registry addresses |
 | [`tally.json`](tally.json) | This repository's own provenance file (see below) |
-| [`docs/`](docs) | [Integrating Tally](docs/integrating.md), [security model](docs/security.md), [networks](docs/networks.md), [deploying a registry](docs/deploy-v2.md), [adding a chain](docs/adding-a-chain.md) |
+| [`docs/`](docs) | [Integrating Tally](docs/integrating.md), [publishing the extension](docs/chrome-web-store.md), [security model](docs/security.md), [networks](docs/networks.md), [deploying a registry](docs/deploy-v2.md), [adding a chain](docs/adding-a-chain.md) |
 | [`scripts/`](scripts) | `sync-chains.mjs`, which generates the studio and extension config and the network list from `chains.json`, and `check-neutral.mjs`, which keeps source code free of network-specific names |
 | [`test-vectors/`](test-vectors) | Decision-rule vectors shared by the studio and extension tests, so both apply the same trust rules |
 | [`brand/`](brand) | Logo, icon and colour tokens (SVG and PNG) |

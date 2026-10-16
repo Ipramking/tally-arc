@@ -2,7 +2,8 @@
   "manifest_version": 3,
   "name": "Tally: Contract Provenance",
   "version": "0.2.0",
-  "description": "Shows contract provenance badges on supported block explorers before you sign: Verified, Control proven, Stale, Self-attested or Unverified.",
+  "description": "Provenance badges for contracts on supported block explorers: Verified, Control proven, Stale, Self-attested or Unverified.",
+  "homepage_url": "https://tally-studio.vercel.app",
   "minimum_chrome_version": "110",
   "icons": {
     "16": "icons/icon16.png",

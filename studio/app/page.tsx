@@ -271,6 +271,7 @@ export default async function Home({ searchParams }: HomeProps) {
 
       <footer className="wrap footer">
         <span>Tally &middot; contract provenance</span>
+        <Link href="/privacy">Privacy</Link>
         <a href={SOURCE_URL} rel="noopener noreferrer">
           Source &amp; security notes
         </a>
