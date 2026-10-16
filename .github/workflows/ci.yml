@@ -99,4 +99,5 @@ jobs:
       - run: npm --prefix extension ci
       - run: npm --prefix sdk test
       - name: Package contents
-        run: npm --prefix sdk pack --dry-run
+        working-directory: sdk
+        run: npm pack --dry-run
