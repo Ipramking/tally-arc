@@ -77,6 +77,26 @@
           "verified": "0xEC84A560DF15cCb86d96c86Bb61d8CEB1c744452",
           "unverified": "0x000000000000000000000000000000000000dEaD"
         }
+      },
+      {
+        "key": "bot",
+        "id": 677,
+        "name": "BOT Chain",
+        "testnet": false,
+        "nativeCurrency": {
+          "name": "BOT",
+          "symbol": "BOT",
+          "decimals": 18
+        },
+        "rpcUrl": "https://rpc.botchain.ai",
+        "explorer": {
+          "name": "BOT Chain Explorer",
+          "url": "https://scan.botchain.ai"
+        },
+        "registries": [],
+        "presets": {
+          "unverified": "0x000000000000000000000000000000000000dEaD"
+        }
       }
     ]
   };
