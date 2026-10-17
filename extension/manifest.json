@@ -26,7 +26,8 @@
       "matches": [
         "https://explorer.arc.io/*",
         "https://explorer.testnet.arc.io/*",
-        "https://scan.bohr.life/*"
+        "https://scan.bohr.life/*",
+        "https://scan.botchain.ai/*"
       ],
       "js": [
         "chains.generated.js",
@@ -42,6 +43,7 @@
     "https://rpc.mainnet.arc.io/*",
     "https://rpc.testnet.arc.io/*",
     "https://rpc.bohr.life/*",
+    "https://rpc.botchain.ai/*",
     "https://raw.githubusercontent.com/*"
   ],
   "content_security_policy": {
