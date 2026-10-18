@@ -7,7 +7,7 @@ A run of the BOT Chain Testnet (Bohr, chain 968) checklist on **17 October 2026*
 source verified on the explorer.
 
 This is a rehearsal by the maintainer, not the partner's review. How each part was run is stated next to it, and what was **not**
-tested is listed at the end.
+tested is listed at the end. Checks 1 to 7 ran on 17 October; check 8, a person using MetaMask, ran on 18 October.
 
 ## Results
 
@@ -20,6 +20,25 @@ tested is listed at the end.
 | 5 | The repository must name the registering wallet | Pass | Against live chain data: the right `signer` verifies, no `signer` fails (`signer-missing`), someone else's `signer` fails (`signer-mismatch`). |
 | 6 | The extension on the Bohr explorer | Pass, in headless Chrome | The badge appears on `scan.bohr.life` for the demo (Tally Verified), the proxy (Control proven), the stale contract (Stale record) and the contract registered in check 4 (Control proven). Each links to the studio's record page. |
 | 7 | The toolbar popup | Pass, in headless Chrome | A lookup on Bohr returns Tally Verified for the demo, with the signer shown. |
+| 8 | A person registers with a real browser wallet and the contract ends **Tally Verified** | Pass, on the second attempt | MetaMask on a fresh wallet, the live register page, then `tally.json`. See below. |
+
+**Check 8 in detail.** A person used MetaMask in a normal Chrome profile with the unpacked extension loaded, on a brand-new wallet
+(`0xD6b8…2eE0`, funded with 0.5 test BOT) and a fresh contract it owns, `0xB758588f964c6EBceeafAd31c355a49c6ba7DB98` (created in
+`0x027c4b7c…4ab5`). The register page added and switched to Bohr, found the wallet as `owner()`, took one signature and one transaction,
+and the record read **Control proven** (signer `0xD6b8…2eE0`, method `OWNER`) with the extension's badge on the explorer. After the
+repository's `tally.json` listed the contract and named that wallet (commit `e294624`), the record page and the explorer badge both read
+**Tally Verified**. The registering transaction is
+[`0x0a4be4ac…c039`](https://scan.bohr.life/tx/0x0a4be4ace09dca4a820ea9f73d809df90544c11ac77bf7f4c43b37a7f5c1c039) (block 27316211, 243,464 gas,
+success). A captioned recording of the run exists. The first attempt did not complete, for the reason in the next section.
+
+**A stale machine behind Bohr's public RPC.** `rpc.bohr.life` is one address in front of several nodes, and during check 8 at least one of
+them was frozen at block 27311921, more than 4,700 blocks (over an hour) behind the rest. Roughly a third of requests reached it. Sampling
+the same address 14 to 16 times returned heads of 27311921 and 27315xxx interleaved, and a wallet's nonce flipping between 0 and 1. The
+effects seen: a transaction MetaMask submitted was accepted and never mined, so the next one queued behind it; the register page showed an
+RPC error (`Cannot destructure property 'gasLimit'`, which is not a contract revert); and a lookup that reached the stale node answered
+"no record" for a contract that was registered. Retrying, after clearing MetaMask's pending activity, completed the registration. It is
+the node operator's to fix. For Tally it means a lookup can be wrong on a lagging node, and a freshness check on the chain head is a
+possible mitigation. It matters for mainnet if `rpc.botchain.ai` is served the same way.
 
 **Check 4 in detail.** A scripted EIP-1193 wallet (in headless Chrome 154, signing with the Bohr test wallet, so real signatures and real
 transactions) drove the live register page for a fresh contract, `0x7Fa0DB5582650cab4387fd0C024cC438c63b3be4`:
@@ -51,17 +70,16 @@ All on Bohr; open one at `https://scan.bohr.life/tx/<hash>`.
 | Stale example `0x636B…C9A7` created, registered, handed over | `0xc9856d241317af1d3471c9f9428c2c5e8f97e647363a99176a8c5eeba4223159`, `0x5d10f49539ff9948e738c70c503ea7ac930c487f11791340dfde49977321da15`, `0x7386c31d1bb80c3c0c53a259df18f8ea5502cfca00872bf03dbcc09d438528a0` |
 | Check 4: contract deployed | `0x2d71ad6548383b2c02c17c544f57b8aa7095d9bc9b6e2c2341985e7db6bbf1dd` (block 27208412) |
 | Check 4: registered through the register page | `0xefb8213f8d30a082a025868fef099d3fa3bb3a70e965cef504e7e1b082e74f25` (block 27208734, 226,364 gas) |
+| Check 8: contract `0xB758…DB98` created | `0x027c4b7c14ff506517fce5246c349ff78b286fe350233f9319c74a24f4bc4ab5` |
+| Check 8: registered with MetaMask | `0x0a4be4ace09dca4a820ea9f73d809df90544c11ac77bf7f4c43b37a7f5c1c039` (block 27316211, 243,464 gas) |
 
 ## Not tested
 
-- **A person using a real browser wallet** (MetaMask, Rabby or a hardware wallet) on the register page. Check 4 used a scripted wallet on the
-  live site and the real chain, which exercises the page, the chain switch, the signature and the transaction, but not a wallet's own
-  prompts. This is the item a tester adds.
-- **A new contract going all the way to Tally Verified through a new GitHub repository.** The signer rule is verified against live chain
-  data (check 5) and by automated tests, but a fresh `tally.json` on GitHub, with the few minutes GitHub caches raw files, was not run for
-  a new contract.
-- **The extension in a normal Chrome profile.** Checks 6 and 7 ran in headless Chrome with the unpacked extension loaded over the DevTools
-  protocol.
+- **Wallets other than MetaMask.** Check 8 used MetaMask. Rabby, a hardware wallet and mobile wallets were not tried.
+- **A contract reaching Tally Verified through its own new GitHub repository.** Check 8 took a new contract to Tally Verified through this
+  repository's `tally.json`. A team's own fresh repository was not run.
+- **The extension from the Chrome Web Store, and the toolbar popup in a normal profile.** Check 8 ran the unpacked extension in a normal
+  Chrome profile (explorer badges). The store listing is not published, and the popup was only checked in headless Chrome (check 7).
 - **Multisig or smart-account owners through the studio.** The contract path is tested against real Safe contracts; the page with a live
   Safe is not.
 - **Mainnet.** Nothing is deployed. See below for what was checked read-only.
