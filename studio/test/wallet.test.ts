@@ -97,4 +97,34 @@ describe("helpers", () => {
     expect(friendlyError(new Error("x".repeat(500))).length).toBeLessThanOrEqual(240);
     expect(friendlyError(undefined)).toBe("Something went wrong.");
   });
+
+  // viem words any "internal error" as `The contract function "register" reverted with the following reason: ...`.
+  const viemWrapped = (reason: string, details = reason) => ({
+    name: "ContractFunctionExecutionError",
+    shortMessage: `The contract function "register" reverted with the following reason:\n${reason}`,
+    cause: { name: "ContractFunctionRevertedError", shortMessage: `The contract function "register" reverted with the following reason:\n${reason}`, cause: { code: -32603, details } },
+  });
+
+  it("friendlyError does not call a node or wallet failure a contract revert", () => {
+    for (const reason of ["Internal JSON-RPC error.", "Cannot destructure property 'gasLimit' of '(intermediate value)' as it is null.", "HTTP request failed.", "header not found"]) {
+      const text = friendlyError(viemWrapped(reason), REVERT_HELP);
+      expect(text, reason).toMatch(/bad answer/);
+      expect(text, reason).toMatch(/not a contract rejection/);
+      expect(text, reason).not.toMatch(/reverted/);
+      expect(text.length).toBeLessThanOrEqual(240);
+    }
+  });
+
+  it("friendlyError tells a stuck wallet transaction apart, and says how to clear it", () => {
+    for (const reason of ["RPC 0x3c8 Custom eth_sendRawTransaction: replacement transaction underpriced", "nonce too low: next nonce 3, tx nonce 1", "already known"]) {
+      expect(friendlyError(viemWrapped(reason), REVERT_HELP), reason).toMatch(/pending or stuck.*Clear activity tab data/);
+    }
+  });
+
+  it("friendlyError still passes a real revert through", () => {
+    const real = { shortMessage: 'The contract function "register" reverted with the following reason:\nexecution reverted', cause: { details: "execution reverted" } };
+    expect(friendlyError(real)).toBe(real.shortMessage.slice(0, 240));
+    expect(friendlyError({ ...viemWrapped("Internal JSON-RPC error."), cause: { data: { errorName: "NotOwner" } } }, REVERT_HELP)).toBe(REVERT_HELP.NotOwner);
+    expect(friendlyError(new Error("The signature expired."))).toBe("The signature expired.");
+  });
 });

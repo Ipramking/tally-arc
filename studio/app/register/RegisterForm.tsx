@@ -114,7 +114,7 @@ export function RegisterForm({ chain, initialAddress }: { chain: ChainDef; initi
     setError(null);
     setDone(null);
     try {
-      const plan = await planProof({ rpcUrl: chain.rpcUrl, target: input.target, account });
+      const plan = await planProof({ rpcUrl: chain.rpcUrl, target: input.target, account, maxHeadAgeSeconds: chain.maxHeadAgeSeconds });
       setChecked({ key: `${account}:${input.target}`, view: explainPlan(plan, { registryVersion: registry.version, chainName: chain.name }) });
     } catch (e) {
       setError(`Could not read ${chain.name}: ${friendlyError(e)}`);

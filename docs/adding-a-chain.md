@@ -28,6 +28,7 @@ Add an object to `chains`:
 | `rpcUrl` | `https` only, no credentials, no query string. Its origin is added to the extension's host permissions and to the studio's `connect-src`. |
 | `explorer.url` | Bare `https` origin, no trailing slash, and **not shared with another chain** (the extension picks the chain from the page's hostname). |
 | `explorer.api` | Optional. An Etherscan-style API (Blockscout answers it) that `hardhat verify` can use to publish the registry's source. Leave it out if the explorer cannot be scripted. |
+| `maxHeadAgeSeconds` | Optional, 0 to 86400, default 300. How old the newest block of the answering node may be before its answer is refused (see "Lagging nodes" below). `0` turns the check off. Set it higher only for a chain that produces blocks slowly or only when there are transactions. |
 | `registries` | Newest first. The first entry receives new registrations; **every** entry is read. `version` is `1` or `2`. |
 | `presets` | Optional `verified` and `unverified` example addresses for the popup and home page. |
 
@@ -84,6 +85,20 @@ works if it offers:
   do not depend on this.
 - **Explorer links** of the form `/address/0x...` and `/tx/0x...`, which is what Etherscan-style and
   Blockscout explorers use.
+
+## Lagging nodes
+
+A public RPC is often one address in front of several nodes, and one of them can fall behind or freeze. Its
+answers are well formed and old: "no record" for a contract that was registered an hour ago. A lookup
+therefore sends every read together with a request for the latest block, in one batch, so the node that
+answers the read also reports how old its chain is. If that block is older than `maxHeadAgeSeconds` the read
+is retried (the load balancer may pick another node) and then refused, and the lookup is **Unavailable**,
+never **Unverified**. The check needs `eth_getBlockByNumber` and batch requests; an endpoint that refuses
+batches is read with two separate requests instead, which is weaker because they can reach different nodes.
+
+The block's timestamp is compared with the clock of the device that is looking. A clock that is wrong by
+more than the limit makes every lookup unavailable, and the message says so. A chain with slow or on-demand
+blocks needs a higher `maxHeadAgeSeconds`.
 
 ## Things to know
 

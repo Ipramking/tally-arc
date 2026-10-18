@@ -93,6 +93,25 @@ export async function switchToChain(provider: Eip1193Provider, chain: ChainDef):
   }
 }
 
+// The wallet library calls any "internal error" a contract revert ("reverted with the following reason:
+// Internal JSON-RPC error."). A real revert carries a decoded error name or says "execution reverted"; the
+// rest is a node or wallet-side failure, and saying "reverted" sends people hunting for the wrong problem.
+const STUCK_TRANSACTION = /replacement transaction underpriced|transaction underpriced|nonce too low|nonce too high|already known/i;
+const NODE_TROUBLE =
+  /internal json-rpc error|internal error|cannot destructure|header not found|missing trie node|failed to fetch|fetch failed|http request failed|request timed out|timed out|network error|too many requests|rate limit|bad gateway|service unavailable|gateway time-?out|econnreset|socket hang up/i;
+
+/** Every message in an error and its causes. */
+function errorTexts(error: unknown): string[] {
+  const texts: string[] = [];
+  let value: unknown = error;
+  for (let depth = 0; value && typeof value === "object" && depth <= 5; depth++) {
+    const v = value as { shortMessage?: unknown; details?: unknown; message?: unknown; cause?: unknown };
+    for (const text of [v.shortMessage, v.details, v.message]) if (typeof text === "string" && text) texts.push(text);
+    value = v.cause;
+  }
+  return texts;
+}
+
 /** A short, human message for wallet and contract errors. */
 export function friendlyError(error: unknown, revertHelp: Readonly<Record<string, string>> = {}): string {
   const e = error as { code?: number; shortMessage?: string; message?: string; name?: string; cause?: unknown; data?: { errorName?: string } };
@@ -106,6 +125,20 @@ export function friendlyError(error: unknown, revertHelp: Readonly<Record<string
   };
   const help = walk(error);
   if (help) return help;
+
+  const texts = errorTexts(error);
+  const all = texts.join(" \n ");
+  if (STUCK_TRANSACTION.test(all)) {
+    return "Your wallet has an earlier transaction that is still pending or stuck, so this one cannot go through. Wait for it, or clear it in the wallet (MetaMask: Settings, Advanced, Clear activity tab data), then try again.";
+  }
+  if (!/execution reverted/i.test(all)) {
+    const trouble = texts.find((text) => NODE_TROUBLE.test(text));
+    if (trouble) {
+      // Quote the reason, not the library's "reverted with the following reason:" wrapper around it.
+      const detail = trouble.replace(/^[\s\S]*?reverted with the following reason:\s*/i, "").replace(/\s+/g, " ").replace(/[.\s]+$/, "").slice(0, 80);
+      return `The network node gave a bad answer, so nothing was confirmed. This is not a contract rejection. Try again in a few seconds (${detail}).`;
+    }
+  }
   const message = e?.shortMessage || e?.message || "Something went wrong.";
   return message.length > 240 ? `${message.slice(0, 239)}\u2026` : message;
 }

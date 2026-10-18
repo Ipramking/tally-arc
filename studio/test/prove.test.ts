@@ -2,7 +2,7 @@ import { encodeFunctionData, getCreateAddress, toFunctionSelector, type Address 
 import { describe, expect, it } from "vitest";
 import { accessControlAbi } from "@/lib/abi";
 import { findDeployerNonce, MAX_NONCE_SCAN, planProof } from "@/lib/prove";
-import { addressWord, boolWord, fakeWorld, OTHER, SIGNER, TARGET } from "./helpers";
+import { addressWord, boolWord, fakeWorld, OTHER, rpcCalls, SIGNER, TARGET } from "./helpers";
 
 const OWNER = toFunctionSelector("owner()");
 const HAS_ROLE = toFunctionSelector("hasRole(bytes32,address)");
@@ -37,8 +37,8 @@ describe("planProof", () => {
   it("hasRole is queried for role 0x00 and the wallet", async () => {
     const w = world({ admin: boolWord(true) });
     await plan(w);
-    const roleCall = w.calls.map((c) => JSON.parse(String(c.init?.body))).find((b) => b.method === "eth_call" && b.params[0].data.startsWith(HAS_ROLE));
-    expect(roleCall.params[0].data).toBe(encodeFunctionData({ abi: accessControlAbi, functionName: "hasRole", args: [`0x${"00".repeat(32)}`, ACCOUNT] }));
+    const roleCall = rpcCalls(w).find((b) => b.method === "eth_call" && b.params[0].data.startsWith(HAS_ROLE));
+    expect(roleCall?.params[0].data).toBe(encodeFunctionData({ abi: accessControlAbi, functionName: "hasRole", args: [`0x${"00".repeat(32)}`, ACCOUNT] }));
   });
 
   it("OWNER wins over ADMIN_ROLE", async () => {

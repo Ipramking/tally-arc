@@ -53,6 +53,16 @@ Rules that matter:
   [`test-vectors/proxy-slots.json`](../test-vectors/proxy-slots.json)); if either is set the
   record stops at *control proven*. A slot that cannot be read makes the answer *unknown*,
   never "not a proxy". Other upgrade patterns (diamonds, hand-rolled proxies) are not detected.
+- **A node that is behind the chain is not an answer.** A public RPC is often one address in front of
+  several nodes, and one can freeze: its replies are well formed and old, including "no record" for a
+  contract registered an hour ago. Every read is therefore sent in one batch together with a request for
+  the latest block, so the node that answers also reports how old its chain is. If that block is older
+  than the chain's `maxHeadAgeSeconds` (default 300) the read is retried and then refused, and the
+  answer is *unknown*, never *unverified*. A node's "reverted" is judged only after it passes the same
+  check. The block time is compared with the clock of the device that is looking, so a clock that is
+  wrong by more than the limit also makes lookups unavailable, and the message says so. Pinned by the
+  `freshness` tests in `studio/test/rpc.test.ts` and `extension/test/registry.test.js`. See
+  [adding-a-chain.md](adding-a-chain.md#lagging-nodes).
 
 ## 3. Registry v2
 

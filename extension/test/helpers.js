@@ -85,12 +85,50 @@ function fakeFetch(handler) {
  * rpc: { [toLower]: { [selector]: resultHex | Error | {error:{code,message}} } }
  * files: { [url]: string | number (status) | Error }
  */
-function fakeWorld({ rpc = {}, files = {}, code = {}, storage = {} } = {}) {
+function fakeWorld({ rpc = {}, files = {}, code = {}, storage = {}, head } = {}) {
   // eth_getCode: every address holds code unless a test says otherwise ("0x" = a wallet).
   const codeOf = Object.fromEntries(Object.entries(code).map(([k, v]) => [k.toLowerCase(), v]));
   // eth_getStorageAt: every slot is empty (not a proxy) unless a test says otherwise.
   // storage: { [addressLower]: { [slotLower]: wordHex | Error | {error:{code,message}} } }
   const storageOf = Object.fromEntries(Object.entries(storage).map(([k, v]) => [k.toLowerCase(), v]));
+  // head: the node's newest block as the freshness probe sees it: { ageSeconds }, a block object, an
+  // Error to throw, { error }, or a function returning any of those. Default: a block from this second.
+
+  /** One JSON-RPC request object to its reply object. Throws to fail the whole HTTP request. */
+  const answer = (body) => {
+    const id = body.id === undefined ? 1 : body.id;
+    const ok = (result) => ({ jsonrpc: "2.0", id, result });
+    const err = (error) => ({ jsonrpc: "2.0", id, error });
+    if (body.method === "eth_getBlockByNumber" && body.params[0] === "latest") {
+      const h = typeof head === "function" ? head() : head;
+      if (h instanceof Error) throw h;
+      if (h && h.error) return err(h.error);
+      if (h && !("ageSeconds" in h)) return ok(h);
+      const age = (h && h.ageSeconds) || 0;
+      return ok({ number: "0x10", timestamp: "0x" + Math.floor(Date.now() / 1000 - age).toString(16), transactions: [] });
+    }
+    if (body.method === "eth_getCode") {
+      const reply = String(body.params[0]).toLowerCase() in codeOf ? codeOf[String(body.params[0]).toLowerCase()] : "0x6001";
+      if (reply instanceof Error) throw reply;
+      if (reply && reply.error) return err(reply.error);
+      return ok(reply);
+    }
+    if (body.method === "eth_getStorageAt") {
+      const slots = storageOf[String(body.params[0]).toLowerCase()] || {};
+      const slot = String(body.params[1]).toLowerCase();
+      const reply = slot in slots ? slots[slot] : ZERO_WORD;
+      if (reply instanceof Error) throw reply;
+      if (reply && reply.error) return err(reply.error);
+      return ok(reply);
+    }
+    const { to, data } = body.params[0];
+    const reply = (rpc[to.toLowerCase()] || {})[data.slice(0, 10)];
+    if (reply instanceof Error) throw reply;
+    if (reply === undefined) return err({ code: 3, message: "execution reverted" });
+    if (reply && reply.error) return err(reply.error);
+    return ok(reply);
+  };
+
   return fakeFetch(async (url, init) => {
     if (url.startsWith("https://raw.githubusercontent.com/")) {
       const file = files[url];
@@ -100,32 +138,26 @@ function fakeWorld({ rpc = {}, files = {}, code = {}, storage = {} } = {}) {
       return textResponse(file);
     }
     const body = JSON.parse(init.body);
-    if (body.method === "eth_getCode") {
-      const reply = String(body.params[0]).toLowerCase() in codeOf ? codeOf[String(body.params[0]).toLowerCase()] : "0x6001";
-      if (reply instanceof Error) throw reply;
-      if (reply && reply.error) return Response.json({ jsonrpc: "2.0", id: 1, error: reply.error });
-      return Response.json({ jsonrpc: "2.0", id: 1, result: reply });
-    }
-    if (body.method === "eth_getStorageAt") {
-      const slots = storageOf[String(body.params[0]).toLowerCase()] || {};
-      const slot = String(body.params[1]).toLowerCase();
-      const reply = slot in slots ? slots[slot] : ZERO_WORD;
-      if (reply instanceof Error) throw reply;
-      if (reply && reply.error) return Response.json({ jsonrpc: "2.0", id: 1, error: reply.error });
-      return Response.json({ jsonrpc: "2.0", id: 1, result: reply });
-    }
-    const { to, data } = body.params[0];
-    const reply = (rpc[to.toLowerCase()] || {})[data.slice(0, 10)];
-    if (reply instanceof Error) throw reply;
-    if (reply === undefined) return Response.json({ jsonrpc: "2.0", id: 1, error: { code: 3, message: "execution reverted" } });
-    if (reply && reply.error) return Response.json({ jsonrpc: "2.0", id: 1, error: reply.error });
-    return Response.json({ jsonrpc: "2.0", id: 1, result: reply });
+    // A batch is answered as one request, in an order a real node is free to choose (reversed here).
+    if (Array.isArray(body)) return Response.json(body.map(answer).reverse());
+    return Response.json(answer(body));
   });
+}
+
+/** Every real JSON-RPC call a fake saw, flattened out of batches, without the freshness probes. */
+function rpcCalls(world) {
+  return world.calls
+    .filter((c) => !c.url.startsWith("https://raw.githubusercontent.com/"))
+    .flatMap((c) => {
+      const body = JSON.parse(String(c.init && c.init.body ? c.init.body : "{}"));
+      return Array.isArray(body) ? body : [body];
+    })
+    .filter((b) => !(b.method === "eth_getBlockByNumber" && b.params && b.params[0] === "latest"));
 }
 
 const tallyJson = (...contracts) => JSON.stringify({ version: 1, contracts });
 
 module.exports = {
   root, lib, chains, arc, vectors, ZERO, ZERO_WORD, SIGNER, TARGET, REPO,
-  encodeV1, encodeV2, encodeNone, encodeAddressWord, registryRpc, v1Registry, textResponse, fakeFetch, fakeWorld, tallyJson,
+  encodeV1, encodeV2, encodeNone, encodeAddressWord, registryRpc, v1Registry, textResponse, fakeFetch, fakeWorld, rpcCalls, tallyJson,
 };
