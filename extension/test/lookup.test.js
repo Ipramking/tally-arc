@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { lib, arc, encodeV1, encodeV2, encodeAddressWord, fakeWorld, tallyJson, SIGNER, TARGET, REPO } = require("./helpers");
+const { lib, arc, encodeV1, encodeV2, encodeAddressWord, fakeWorld, rpcCalls, tallyJson, SIGNER, TARGET, REPO } = require("./helpers");
 
 const registry = lib("registry.js");
 const status = lib("status.js");
@@ -190,7 +190,7 @@ test("a caller can judge the repository itself: nothing is fetched and the suppl
 const IMPL_WORD = encodeAddressWord("0x5555555555555555555555555555555555555555");
 const OTHER_OWNER = encodeAddressWord("0x9999999999999999999999999999999999999999");
 const v2live = () => rpcFor({ [REG_V2]: { [sel]: encodeV2() }, [REG_V1]: { [sel]: none(1) } });
-const bodies = (world) => world.calls.map((c) => JSON.parse((c.init && c.init.body) || "{}"));
+const bodies = (world) => rpcCalls(world);
 const storageCalls = (world) => bodies(world).filter((b) => b.method === "eth_getStorageAt");
 const ownerCalls = (world) =>
   bodies(world).filter((b) => b.method === "eth_call" && String(b.params[0].to).toLowerCase() === TARGET.toLowerCase() && String(b.params[0].data).startsWith(registry.OWNER));
@@ -296,5 +296,43 @@ test("owner and admin records are not re-probed: the registry already re-checks 
     const world = fakeWorld({ rpc: rpcFor({ [REG_V2]: { [sel]: encodeV2({ method }) }, [REG_V1]: { [sel]: none(1) } }), files: { [FILE]: LISTS_TARGET } });
     await run(both, world);
     assert.equal(ownerCalls(world).length, 0, "method " + method);
+  }
+});
+
+// A node behind the chain gives well-formed, old answers ("no record" for something registered an hour ago).
+// Each read carries a probe of the answering node's newest block.
+const registered = () => rpcFor({ [REG_V2]: { [sel]: encodeV2() }, [REG_V1]: { [sel]: none(1) } });
+
+test("a node that is behind the chain makes the answer 'unknown', never 'unverified'", async () => {
+  const world = fakeWorld({ rpc: rpcFor({ [REG_V2]: { [sel]: none(2) }, [REG_V1]: { [sel]: none(1) } }), head: { ageSeconds: 4700 } });
+  const result = await run(both, world);
+  assert.equal(result.ok, false);
+  assert.equal(result.level, "unknown");
+  assert.match(result.error, /behind: its newest block is 78 minutes old/);
+});
+
+test("a retry that reaches a healthy node answers", async () => {
+  let probes = 0;
+  const world = fakeWorld({ rpc: registered(), files: { [FILE]: LISTS_TARGET }, head: () => ({ ageSeconds: probes++ === 0 ? 4700 : 0 }) });
+  assert.equal((await run(both, world)).level, "verified");
+});
+
+test("when every node is behind: five tries, then 'unknown'", async () => {
+  const world = fakeWorld({ rpc: registered(), head: { ageSeconds: 4700 } });
+  assert.equal((await run(both, world)).level, "unknown");
+  assert.equal(world.calls.length, 5);
+});
+
+test("the chain's own limit decides what counts as behind, and 0 turns the check off", async () => {
+  const answer = (chain, ageSeconds) => run(chain, fakeWorld({ rpc: registered(), files: { [FILE]: LISTS_TARGET }, head: { ageSeconds } }));
+  assert.equal((await answer({ ...both, maxHeadAgeSeconds: 10000 }, 4700)).level, "verified");
+  assert.equal((await answer({ ...both, maxHeadAgeSeconds: 0 }, 4700)).level, "verified");
+  assert.equal((await answer({ ...both, maxHeadAgeSeconds: 30 }, 45)).level, "unknown");
+  assert.equal((await answer(both, 45)).level, "verified", "the default allows five minutes");
+});
+
+test("a head that cannot be read makes the answer 'unknown' too", async () => {
+  for (const head of [{ error: { code: -32000, message: "boom" } }, new Error("socket hang up"), { number: "0x1" }, { timestamp: "nope" }]) {
+    assert.equal((await run(both, fakeWorld({ rpc: registered(), head }))).level, "unknown");
   }
 });

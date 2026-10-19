@@ -108,9 +108,12 @@ test("malformed data throws DecodeError and never half-parses", () => {
   assert.throws(() => registry.decodeRegistration(3, good2), TypeError);
 });
 
+// These tests are about the request itself, so the freshness probe is off (see "freshness" below).
+const RAW = { maxHeadAgeSeconds: 0 };
+
 test("ethCall sends a locked-down JSON-RPC request", async () => {
   const fetchImpl = fakeFetch(() => Response.json({ jsonrpc: "2.0", id: 1, result: "0x1234" }));
-  const result = await registry.ethCall("https://rpc.example", TARGET, "0xabcdef", fetchImpl);
+  const result = await registry.ethCall("https://rpc.example", TARGET, "0xabcdef", fetchImpl, undefined, RAW);
   assert.equal(result, "0x1234");
   const { url, init } = fetchImpl.calls[0];
   assert.equal(url, "https://rpc.example");
@@ -121,7 +124,7 @@ test("ethCall sends a locked-down JSON-RPC request", async () => {
 });
 
 test("ethCall classifies failures", async () => {
-  const run = (handler) => registry.ethCall("https://rpc.example", TARGET, "0x", fakeFetch(handler));
+  const run = (handler) => registry.ethCall("https://rpc.example", TARGET, "0x", fakeFetch(handler), undefined, RAW);
   await assert.rejects(run(() => new Response("", { status: 503 })), /HTTP 503/);
   await assert.rejects(run(() => new Response("<html>", { status: 200 })), /invalid JSON/);
   await assert.rejects(run(() => Response.json({ result: 5 })), /no result/);
@@ -157,4 +160,107 @@ test("v1ControlCurrent compares owner() with the recorded signer", async () => {
   assert.equal(await ask("0x1234"), false, "short return");
   const failing = fakeFetch(() => { throw new TypeError("network down"); });
   await assert.rejects(registry.v1ControlCurrent(arc, TARGET, SIGNER, failing), /network down/);
+});
+
+// --- freshness: every read travels with a "latest block" probe in one batch (one request, one node).
+const NOW = 1_800_000_000_000; // ms
+const header = (age) => ({ number: "0x10", timestamp: "0x" + (NOW / 1000 - age).toString(16), transactions: [] });
+const nodeAnswer = (spec, b) => {
+  if (b.method === "eth_getBlockByNumber") return { jsonrpc: "2.0", id: b.id, result: header(typeof spec.age === "function" ? spec.age() : spec.age || 0) };
+  return spec.error ? { jsonrpc: "2.0", id: b.id, error: spec.error } : { jsonrpc: "2.0", id: b.id, result: spec.result || "0x1234" };
+};
+// Answers a batch (reversed, as a node may) or a single request.
+const batchNode = (spec = {}) =>
+  fakeFetch(async (_url, init) => {
+    const body = JSON.parse(init.body);
+    return Response.json(Array.isArray(body) ? body.map((b) => nodeAnswer(spec, b)).reverse() : nodeAnswer(spec, body));
+  });
+const guard = { nowMs: () => NOW };
+const sent = (fetchImpl) => fetchImpl.calls.map((c) => JSON.parse(c.init.body));
+
+test("freshness: the read and a latest-block probe are one batch, matched by id", async () => {
+  const fetchImpl = batchNode({ result: "0x1234" });
+  assert.equal(await registry.ethCall("https://rpc.shape", TARGET, "0xabcdef", fetchImpl, undefined, guard), "0x1234");
+  assert.equal(fetchImpl.calls.length, 1);
+  assert.equal(fetchImpl.calls[0].init.credentials, "omit");
+  assert.equal(fetchImpl.calls[0].init.redirect, "error");
+  const [body] = sent(fetchImpl);
+  assert.deepEqual(body.map((b) => [b.id, b.method]), [[1, "eth_getBlockByNumber"], [2, "eth_call"]]);
+  assert.deepEqual(body[0].params, ["latest", false]);
+  assert.deepEqual(body[1].params, [{ to: TARGET, data: "0xabcdef" }, "latest"]);
+});
+
+test("freshness: a node whose newest block is old is retried, then refused", async () => {
+  const fetchImpl = batchNode({ age: 4700 });
+  const error = await registry.ethCall("https://rpc.stale", TARGET, "0x", fetchImpl, undefined, guard).catch((e) => e);
+  assert.ok(error instanceof registry.StaleNodeError);
+  assert.ok(error instanceof registry.RpcError);
+  assert.equal(error.ageSeconds, 4700);
+  assert.match(error.message, /behind: its newest block is 78 minutes old/);
+  assert.equal(fetchImpl.calls.length, 5);
+  const once = batchNode({ age: 4700 });
+  await assert.rejects(registry.ethCall("https://rpc.stale", TARGET, "0x", once, undefined, { ...guard, attempts: 1 }), registry.StaleNodeError);
+  assert.equal(once.calls.length, 1);
+});
+
+test("freshness: a retry that lands on a healthy node answers", async () => {
+  let probes = 0;
+  const fetchImpl = batchNode({ age: () => (probes++ < 2 ? 4700 : 1), result: "0xbeef" });
+  assert.equal(await registry.ethCall("https://rpc.retry", TARGET, "0x", fetchImpl, undefined, guard), "0xbeef");
+  assert.equal(fetchImpl.calls.length, 3);
+});
+
+test("freshness: a stale node's revert is not an answer; a current node's is", async () => {
+  const error = { code: 3, message: "execution reverted" };
+  const stale = await registry.ethCall("https://rpc.revert", TARGET, "0x", batchNode({ age: 4700, error }), undefined, guard).catch((e) => e);
+  assert.ok(stale instanceof registry.StaleNodeError);
+  const fresh = await registry.ethCall("https://rpc.revert", TARGET, "0x", batchNode({ age: 2, error }), undefined, guard).catch((e) => e);
+  assert.ok(fresh instanceof registry.RpcError && !(fresh instanceof registry.StaleNodeError));
+  assert.equal(fresh.revert, true);
+});
+
+test("freshness: the limit is the caller's, a head in the future is fine, and 0 sends a plain request", async () => {
+  assert.equal(await registry.ethCall("https://rpc.limit", TARGET, "0x", batchNode({ age: 4700 }), undefined, { ...guard, maxHeadAgeSeconds: 10000 }), "0x1234");
+  await assert.rejects(registry.ethCall("https://rpc.limit", TARGET, "0x", batchNode({ age: 45 }), undefined, { ...guard, maxHeadAgeSeconds: 30 }), registry.StaleNodeError);
+  assert.equal(await registry.ethCall("https://rpc.limit", TARGET, "0x", batchNode({ age: 45 }), undefined, guard), "0x1234");
+  assert.equal(await registry.ethCall("https://rpc.limit", TARGET, "0x", batchNode({ age: -3600 }), undefined, guard), "0x1234");
+  const plain = batchNode({ age: 99999 });
+  assert.equal(await registry.ethCall("https://rpc.limit", TARGET, "0x", plain, undefined, { ...guard, maxHeadAgeSeconds: 0 }), "0x1234");
+  assert.equal(Array.isArray(sent(plain)[0]), false);
+});
+
+test("freshness: an answer without the probe, or with a malformed one, is refused", async () => {
+  const missing = fakeFetch(async () => Response.json([{ jsonrpc: "2.0", id: 2, result: "0x1234" }]));
+  await assert.rejects(registry.ethCall("https://rpc.missing", TARGET, "0x", missing, undefined, guard), /malformed batch/);
+  for (const probe of [{ result: { number: "0x1" } }, { result: { timestamp: "soon" } }, { result: null }, { error: { code: -32000, message: "boom" } }]) {
+    const fetchImpl = fakeFetch(async () => Response.json([{ jsonrpc: "2.0", id: 1, ...probe }, { jsonrpc: "2.0", id: 2, result: "0x1234" }]));
+    await assert.rejects(registry.ethCall("https://rpc.probe", TARGET, "0x", fetchImpl, undefined, guard), registry.RpcError);
+  }
+});
+
+test("freshness: an endpoint that refuses batches is read with two requests, and remembered", async () => {
+  const refusals = [() => new Response("no", { status: 400 }), () => Response.json({ jsonrpc: "2.0", id: null, error: { code: -32600, message: "batch not supported" } })];
+  for (const [i, refuse] of refusals.entries()) {
+    const url = "https://rpc.nobatch/" + i;
+    const spec = { age: 4700 };
+    const fetchImpl = fakeFetch(async (_u, init) => {
+      const body = JSON.parse(init.body);
+      return Array.isArray(body) ? refuse() : Response.json(nodeAnswer(spec, body));
+    });
+    await assert.rejects(registry.ethCall(url, TARGET, "0x", fetchImpl, undefined, { ...guard, attempts: 1 }), registry.StaleNodeError);
+    assert.equal(fetchImpl.calls.length, 3, "the refused batch, then the probe, then the read");
+    spec.age = 0;
+    assert.equal(await registry.ethCall(url, TARGET, "0x", fetchImpl, undefined, guard), "0x1234");
+    assert.equal(fetchImpl.calls.length, 5, "no second batch attempt");
+    assert.equal(sent(fetchImpl).filter((b) => Array.isArray(b)).length, 1);
+  }
+});
+
+test("freshness: a server error on the batch is a failure, not 'batches are refused'", async () => {
+  const url = "https://rpc.flaky";
+  const down = fakeFetch(async () => new Response("", { status: 503 }));
+  await assert.rejects(registry.ethCall(url, TARGET, "0x", down, undefined, guard), /HTTP 503/);
+  const healthy = batchNode();
+  assert.equal(await registry.ethCall(url, TARGET, "0x", healthy, undefined, guard), "0x1234");
+  assert.equal(Array.isArray(sent(healthy)[0]), true);
 });

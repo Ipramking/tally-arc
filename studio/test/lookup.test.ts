@@ -4,7 +4,7 @@ import { badgeSvg } from "@/lib/badge";
 import { lookupContract } from "@/lib/lookup";
 import { describe as describeLevel, LEVELS } from "@/lib/status";
 import { EIP1967_BEACON_SLOT, EIP1967_IMPLEMENTATION_SLOT } from "@/lib/proxy";
-import { addressWord, arcChain, encodeV1, encodeV2, fakeWorld, NONE_V1, NONE_V2, REG_V1, REG_V2, REPO, SIGNER, storageBySlot, tallyJson, TARGET } from "./helpers";
+import { addressWord, arcChain, encodeV1, encodeV2, fakeWorld, NONE_V1, NONE_V2, REG_V1, REG_V2, REPO, rpcCalls, SIGNER, storageBySlot, tallyJson, TARGET } from "./helpers";
 
 const SEL = toFunctionSelector("getRegistration(address)");
 const OWNER = toFunctionSelector("owner()");
@@ -45,7 +45,7 @@ describe("lookupContract", () => {
     const world = fakeWorld({ rpc: { [REG_V2]: { [SEL]: encodeV2() }, [REG_V1]: { [SEL]: NONE_V1() }, [TARGET]: { eth_getCode: "0x" } } });
     const result = await run(both, world);
     expect(result.level).not.toBe("wallet");
-    expect(world.calls.filter((c) => JSON.parse(String(c.init?.body ?? "{}")).method === "eth_getCode")).toHaveLength(0);
+    expect(rpcCalls(world).filter((b) => b.method === "eth_getCode")).toHaveLength(0);
   });
 
   it("describes a wallet in plain words and gives it a neutral badge", () => {
@@ -149,7 +149,7 @@ describe("lookupContract", () => {
 
 const IMPL_WORD = addressWord("0x5555555555555555555555555555555555555555");
 const OTHER_OWNER = addressWord("0x9999999999999999999999999999999999999999");
-const rpcBodies = (world: ReturnType<typeof fakeWorld>) => world.calls.map((c) => JSON.parse(String(c.init?.body ?? "{}")));
+const rpcBodies = (world: ReturnType<typeof fakeWorld>) => rpcCalls(world);
 const storageCalls = (world: ReturnType<typeof fakeWorld>) => rpcBodies(world).filter((b) => b.method === "eth_getStorageAt");
 const ownerCalls = (world: ReturnType<typeof fakeWorld>) =>
   rpcBodies(world).filter((b) => b.method === "eth_call" && String(b.params[0].to).toLowerCase() === TARGET.toLowerCase() && String(b.params[0].data).startsWith(OWNER));
@@ -206,6 +206,43 @@ describe("what 'verified' requires", () => {
     const world = fakeWorld({ rpc: v2live, files: { [FILE]: LISTS } });
     await run(both, world);
     expect(storageCalls(world).map((b) => b.params[1]).sort()).toEqual([EIP1967_BEACON_SLOT, EIP1967_IMPLEMENTATION_SLOT].sort());
+  });
+});
+
+describe("a node that is behind the chain", () => {
+  const registered = { [REG_V2]: { [SEL]: encodeV2() }, [REG_V1]: { [SEL]: NONE_V1() } };
+  const unregistered = { [REG_V2]: { [SEL]: NONE_V2() }, [REG_V1]: { [SEL]: NONE_V1() } };
+
+  it("makes the answer 'unknown', never 'unverified', however sure it is that there is no record", async () => {
+    const result = await run(both, fakeWorld({ rpc: unregistered, head: { ageSeconds: 4700 } }));
+    expect(result).toMatchObject({ ok: false, level: "unknown" });
+    expect(!result.ok && result.error).toMatch(/behind/);
+  });
+
+  it("is retried, so a healthy node behind the same address gets to answer", async () => {
+    let probes = 0;
+    const world = fakeWorld({ rpc: registered, files: { [FILE]: LISTS }, head: () => ({ ageSeconds: probes++ === 0 ? 4700 : 0 }) });
+    expect(await run(both, world)).toMatchObject({ ok: true, level: "verified" });
+  });
+
+  it("is refused after five tries when every node is behind, one request per try", async () => {
+    const world = fakeWorld({ rpc: registered, head: { ageSeconds: 4700 } });
+    expect(await run(both, world)).toMatchObject({ ok: false, level: "unknown" });
+    expect(world.calls).toHaveLength(5);
+  });
+
+  it("is judged against the chain's own limit, and 0 turns the check off", async () => {
+    const answer = (chain: object, ageSeconds: number) => run(chain as typeof both, fakeWorld({ rpc: registered, files: { [FILE]: LISTS }, head: { ageSeconds } }));
+    expect(await answer({ ...both, maxHeadAgeSeconds: 10_000 }, 4700)).toMatchObject({ ok: true, level: "verified" });
+    expect(await answer({ ...both, maxHeadAgeSeconds: 0 }, 4700)).toMatchObject({ ok: true, level: "verified" });
+    expect(await answer({ ...both, maxHeadAgeSeconds: 30 }, 45)).toMatchObject({ ok: false, level: "unknown" });
+    expect(await answer(both, 45)).toMatchObject({ ok: true, level: "verified" }); // the default allows five minutes
+  });
+
+  it("a head that cannot be read is 'unknown' too", async () => {
+    for (const head of [{ error: { code: -32000, message: "boom" } }, new Error("socket hang up"), { number: "0x1" }, { timestamp: "nope" }]) {
+      expect(await run(both, fakeWorld({ rpc: registered, head: head as never }))).toMatchObject({ ok: false, level: "unknown" });
+    }
   });
 });
 

@@ -76,7 +76,13 @@ const unavailable = (registry: Address, error: unknown): History => ({
 export async function readHistory(chain: ChainDef, registry: RegistryDef, target: Address, options: HistoryOptions = {}): Promise<History> {
   if (registry.version !== 2) return { status: "unsupported", registry: registry.address };
   const limit = Math.min(Math.max(Math.trunc(options.limit ?? DEFAULT_PAGE), 1), MAX_PAGE);
-  const net: NetOptions = { fetchImpl: options.fetchImpl, timeoutMs: options.timeoutMs };
+  const net: NetOptions = {
+    fetchImpl: options.fetchImpl,
+    timeoutMs: options.timeoutMs,
+    maxHeadAgeSeconds: options.maxHeadAgeSeconds ?? chain.maxHeadAgeSeconds,
+    freshnessAttempts: options.freshnessAttempts,
+    nowMs: options.nowMs,
+  };
 
   let total: number;
   try {

@@ -15,6 +15,8 @@ export interface ChainDef {
   readonly nativeCurrency: { readonly name: string; readonly symbol: string; readonly decimals: number };
   readonly rpcUrl: string;
   readonly explorer: { readonly name: string; readonly url: string };
+  /** Optional. A node whose newest block is older than this (seconds) is refused. Default 300; 0 turns the check off. */
+  readonly maxHeadAgeSeconds?: number;
   /** Newest first. The first entry receives writes; every entry is read. */
   readonly registries: readonly RegistryDef[];
   readonly presets: { readonly verified?: `0x${string}`; readonly unverified?: `0x${string}` };

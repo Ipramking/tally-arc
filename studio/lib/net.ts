@@ -9,6 +9,12 @@ export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>
 export interface NetOptions {
   fetchImpl?: FetchLike;
   timeoutMs?: number;
+  /** Reads are refused when the answering node's newest block is older than this (seconds). 0 turns the check off. */
+  maxHeadAgeSeconds?: number;
+  /** How many times a read is retried when the answering node is behind (the load balancer may pick another node). */
+  freshnessAttempts?: number;
+  /** Clock for the freshness check, in milliseconds. Tests only. */
+  nowMs?: () => number;
 }
 
 export function timeoutSignal(ms: number = DEFAULT_TIMEOUT_MS): AbortSignal {

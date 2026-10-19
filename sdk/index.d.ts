@@ -15,6 +15,8 @@ export interface Chain {
   /** https only. */
   rpcUrl: string;
   explorer?: { name: string; url: string };
+  /** A node whose newest block is older than this many seconds is refused (default 300; 0 turns the check off). */
+  maxHeadAgeSeconds?: number;
   /** Newest first. Every entry is read; the newest record wins. */
   registries: RegistryDef[];
   presets?: { verified?: string; unverified?: string };
@@ -59,6 +61,13 @@ export interface LookupOptions {
   address: string;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
+  /**
+   * A node whose newest block is older than this many seconds is retried and then refused, and the answer is
+   * { ok: false, level: "unknown" } rather than a stale "unverified". Defaults to the chain's own limit, then 300. 0 turns it off.
+   */
+  maxHeadAgeSeconds?: number;
+  /** How many times a read is tried when the answering node is behind (the load balancer may pick another node). Default 5. */
+  freshnessAttempts?: number;
   /** Judge the repository yourself (for example from a checkout) instead of fetching its tally.json from GitHub. */
   repoCheck?: (record: Registration) => RepoCheck | Promise<RepoCheck>;
 }

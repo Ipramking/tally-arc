@@ -60,10 +60,50 @@ export type FakeFetch = ((url: string, init?: RequestInit) => Promise<Response>)
  * other methods (eth_getCode, eth_getTransactionCount) are keyed by name under "*".
  * files: GitHub raw URL -> text | status number | Error.
  */
-export function fakeWorld(spec: { rpc?: Record<string, Record<string, RpcReply>>; files?: Record<string, string | number | Error> } = {}): FakeFetch {
+export function fakeWorld(
+  spec: {
+    rpc?: Record<string, Record<string, RpcReply>>;
+    files?: Record<string, string | number | Error>;
+    /** The node's newest block, as seen by the freshness probe. Default: a block from this second. */
+    head?: { ageSeconds?: number } | Error | { error: { code: number; message: string } } | (() => unknown);
+  } = {},
+): FakeFetch {
   const rpc = Object.fromEntries(Object.entries(spec.rpc ?? {}).map(([k, v]) => [k.toLowerCase(), v]));
   const files = spec.files ?? {};
   const calls: FakeFetch["calls"] = [];
+
+  /** Answer one JSON-RPC request object: a { jsonrpc, id, result | error } reply. Throws to fail the whole HTTP request. */
+  const answer = (body: { id: number; method: string; params: any[] }) => {
+    const ok = (result: unknown) => ({ jsonrpc: "2.0", id: body.id, result });
+    const err = (error: unknown) => ({ jsonrpc: "2.0", id: body.id, error });
+    // The freshness probe: the newest block's header.
+    if (body.method === "eth_getBlockByNumber" && body.params[0] === "latest") {
+      const head = typeof spec.head === "function" ? spec.head() : spec.head;
+      if (head instanceof Error) throw head;
+      if (head && typeof head === "object" && "error" in head) return err(head.error);
+      if (head !== undefined && head !== null && typeof head === "object" && !("ageSeconds" in head)) return ok(head);
+      const age = (head as { ageSeconds?: number } | undefined)?.ageSeconds ?? 0;
+      return ok({ number: "0x10", timestamp: `0x${Math.floor(Date.now() / 1000 - age).toString(16)}`, transactions: [] });
+    }
+    let reply: RpcReply | undefined;
+    if (body.method === "eth_call") {
+      const { to, data } = body.params[0];
+      reply = rpc[String(to).toLowerCase()]?.[String(data).slice(0, 10)];
+      if (reply === undefined) return err({ code: 3, message: "execution reverted" });
+    } else {
+      reply = rpc["*"]?.[body.method] ?? rpc[String(body.params[0]).toLowerCase()]?.[body.method];
+      // Every address holds code unless a test says otherwise ("0x" = a wallet).
+      if (reply === undefined && body.method === "eth_getCode") reply = "0x6001";
+      // Every contract has empty proxy slots unless a test says otherwise.
+      if (reply === undefined && body.method === "eth_getStorageAt") reply = ZERO_WORD;
+      if (reply === undefined) return err({ code: -32601, message: `no fake for ${body.method}` });
+    }
+    if (typeof reply === "function") reply = reply(body.params) as RpcReply;
+    if (reply instanceof Error) throw reply;
+    if (reply && typeof reply === "object" && !Array.isArray(reply) && "error" in reply) return err((reply as { error: unknown }).error);
+    return ok(reply);
+  };
+
   const fn = (async (url: string, init?: RequestInit) => {
     calls.push({ url, init });
     if (url.startsWith("https://raw.githubusercontent.com/")) {
@@ -74,26 +114,23 @@ export function fakeWorld(spec: { rpc?: Record<string, Record<string, RpcReply>>
       return new Response(file);
     }
     const body = JSON.parse(String(init?.body));
-    let reply: RpcReply | undefined;
-    if (body.method === "eth_call") {
-      const { to, data } = body.params[0];
-      reply = rpc[String(to).toLowerCase()]?.[String(data).slice(0, 10)];
-      if (reply === undefined) return Response.json({ jsonrpc: "2.0", id: 1, error: { code: 3, message: "execution reverted" } });
-    } else {
-      reply = rpc["*"]?.[body.method] ?? rpc[String(body.params[0]).toLowerCase()]?.[body.method];
-      // Every address holds code unless a test says otherwise ("0x" = a wallet).
-      if (reply === undefined && body.method === "eth_getCode") reply = "0x6001";
-      // Every contract has empty proxy slots unless a test says otherwise.
-      if (reply === undefined && body.method === "eth_getStorageAt") reply = ZERO_WORD;
-      if (reply === undefined) return Response.json({ jsonrpc: "2.0", id: 1, error: { code: -32601, message: `no fake for ${body.method}` } });
-    }
-    if (typeof reply === "function") reply = reply(body.params) as RpcReply;
-    if (reply instanceof Error) throw reply;
-    if (reply && typeof reply === "object" && !Array.isArray(reply) && "error" in reply) return Response.json({ jsonrpc: "2.0", id: 1, error: (reply as { error: unknown }).error });
-    return Response.json({ jsonrpc: "2.0", id: 1, result: reply });
+    // A batch is answered as one request, in any order a real node might use (reversed here).
+    if (Array.isArray(body)) return Response.json(body.map((one) => answer({ ...one, id: one.id ?? 1 })).reverse());
+    return Response.json(answer({ ...body, id: body.id ?? 1 }));
   }) as FakeFetch;
   fn.calls = calls;
   return fn;
+}
+
+/** Every real JSON-RPC call a fake saw, flattened out of batches, without the freshness probes. */
+export function rpcCalls(world: FakeFetch): { method: string; params: any[] }[] {
+  return world.calls
+    .filter((c) => !c.url.startsWith("https://raw.githubusercontent.com/"))
+    .flatMap((c) => {
+      const body = JSON.parse(String(c.init?.body ?? "{}"));
+      return Array.isArray(body) ? body : [body];
+    })
+    .filter((b) => !(b.method === "eth_getBlockByNumber" && b.params?.[0] === "latest"));
 }
 
 export const tallyJson = (...contracts: unknown[]) => JSON.stringify({ version: 1, contracts });

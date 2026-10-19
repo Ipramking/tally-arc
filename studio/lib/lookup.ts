@@ -17,7 +17,9 @@ export type Lookup =
 
 /** Never throws for network or decoding failures; those become level "unknown". */
 export async function lookupContract(input: { chain: ChainDef; address: string } & NetOptions): Promise<Lookup> {
-  const { chain, address, ...net } = input;
+  const { chain, address, ...options } = input;
+  // The chain's own limit applies unless the caller passes one.
+  const net: NetOptions = { ...options, maxHeadAgeSeconds: options.maxHeadAgeSeconds ?? chain.maxHeadAgeSeconds };
   if (!isAddress(address)) return { ok: false, level: "unknown", error: "invalid address" };
   if (chain.registries.length === 0) return { ok: false, level: "unknown", error: `no registry deployed on ${chain.name}` };
 
