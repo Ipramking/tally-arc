@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "5.0.2",
-    "dotenv": "^18.0.7"
+    "dotenv": "^18.0.8"
   },
   "overrides": {
     "@safe-global/safe-contracts": {
