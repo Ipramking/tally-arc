@@ -93,8 +93,14 @@
           "name": "BOT Chain Explorer",
           "url": "https://scan.botchain.ai"
         },
-        "registries": [],
+        "registries": [
+          {
+            "version": 2,
+            "address": "0x459Cab32306c439a408cA6b8672CcF6c6A0536d9"
+          }
+        ],
         "presets": {
+          "verified": "0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb",
           "unverified": "0x000000000000000000000000000000000000dEaD"
         }
       }
