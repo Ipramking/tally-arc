@@ -55,6 +55,7 @@
       "nativeCurrency": { "name": "BOT", "symbol": "BOT", "decimals": 18 },
       "rpcUrl": "https://rpc.botchain.ai",
       "explorer": { "name": "BOT Chain Explorer", "url": "https://scan.botchain.ai", "api": "https://scan.botchain.ai/api" },
+      "website": "https://botchain.ai",
       "registries": [{ "version": 2, "address": "0x459Cab32306c439a408cA6b8672CcF6c6A0536d9" }],
       "presets": {
         "verified": "0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb",

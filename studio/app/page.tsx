@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Nav } from "./components/Nav";
 import { StatusBadge } from "./components/StatusBadge";
 import { TallyMark } from "./components/TallyMark";
-import { defaultChain, resolveChain, STUDIO_URL } from "@/lib/chain";
+import { defaultChain, networkLinks, resolveChain, STUDIO_URL } from "@/lib/chain";
 import { LEVELS, type Level } from "@/lib/status";
 
 const SOURCE_URL = "https://github.com/Ipramking/tally-arc";
@@ -275,6 +275,26 @@ export default async function Home({ searchParams }: HomeProps) {
         <a href={SOURCE_URL} rel="noopener noreferrer">
           Source &amp; security notes
         </a>
+        <div className="footer-networks">
+          <span>Networks</span>
+          {networkLinks().map((network) => (
+            <span key={network.key} className="footer-network">
+              {network.website ? (
+                <a href={network.website} rel="noopener noreferrer">
+                  {network.name}
+                </a>
+              ) : (
+                <span>{network.name}</span>
+              )}
+              <a href={network.explorerUrl} rel="noopener noreferrer">
+                {network.explorerName}
+              </a>
+            </span>
+          ))}
+          <p className="footer-note">
+            Network names and links are for reference. A badge is provenance evidence: not an audit, and not an endorsement by any network.
+          </p>
+        </div>
       </footer>
     </>
   );

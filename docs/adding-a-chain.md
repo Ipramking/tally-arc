@@ -27,6 +27,7 @@ Add an object to `chains`:
 | `id` | The chain id; unique. |
 | `rpcUrl` | `https` only, no credentials, no query string. Its origin is added to the extension's host permissions and to the studio's `connect-src`. |
 | `explorer.url` | Bare `https` origin, no trailing slash, and **not shared with another chain** (the extension picks the chain from the page's hostname). |
+| `website` | Optional. The network's own site, a bare `https` origin. The studio footer links the name to it for every mainnet that sets one. |
 | `explorer.api` | Optional. An Etherscan-style API (Blockscout answers it) that `hardhat verify` can use to publish the registry's source. Leave it out if the explorer cannot be scripted. |
 | `maxHeadAgeSeconds` | Optional, 0 to 86400, default 300. How old the newest block of the answering node may be before its answer is refused (see "Lagging nodes" below). `0` turns the check off. Set it higher only for a chain that produces blocks slowly or only when there are transactions. |
 | `registries` | Newest first. The first entry receives new registrations; **every** entry is read. `version` is `1` or `2`. |

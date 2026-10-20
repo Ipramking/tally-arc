@@ -15,6 +15,8 @@ export interface ChainDef {
   readonly nativeCurrency: { readonly name: string; readonly symbol: string; readonly decimals: number };
   readonly rpcUrl: string;
   readonly explorer: { readonly name: string; readonly url: string };
+  /** Optional. The network's own website (https origin), linked from the studio footer. */
+  readonly website?: string;
   /** Optional. A node whose newest block is older than this (seconds) is refused. Default 300; 0 turns the check off. */
   readonly maxHeadAgeSeconds?: number;
   /** Newest first. The first entry receives writes; every entry is read. */
@@ -115,6 +117,7 @@ export const CHAINS = [
       "name": "BOT Chain Explorer",
       "url": "https://scan.botchain.ai"
     },
+    "website": "https://botchain.ai",
     "registries": [
       {
         "version": 2,

@@ -74,6 +74,7 @@ function validate(config) {
     const explorerOrigin = httpsOrigin(chain.explorer.url, `${where}: explorer.url`, { pathAllowed: false }).origin;
     if (chain.explorer.api !== undefined) httpsOrigin(chain.explorer.api, `${where}: explorer.api`, { pathAllowed: true });
     // Optional: how old the newest block may be (seconds) before a node's answer is refused. 0 turns the check off.
+    if (chain.website !== undefined) httpsOrigin(chain.website, `${where}: website`, { pathAllowed: false });
     if (chain.maxHeadAgeSeconds !== undefined && (!Number.isInteger(chain.maxHeadAgeSeconds) || chain.maxHeadAgeSeconds < 0 || chain.maxHeadAgeSeconds > 86400)) {
       fail(`${where}: maxHeadAgeSeconds must be a whole number of seconds from 0 to 86400`);
     }
@@ -126,6 +127,7 @@ function normalize(config) {
       nativeCurrency: { name: chain.nativeCurrency.name, symbol: chain.nativeCurrency.symbol, decimals: chain.nativeCurrency.decimals },
       rpcUrl: chain.rpcUrl,
       explorer: { name: chain.explorer.name, url: chain.explorer.url },
+      ...(chain.website !== undefined ? { website: chain.website } : {}),
       ...(chain.maxHeadAgeSeconds !== undefined ? { maxHeadAgeSeconds: chain.maxHeadAgeSeconds } : {}),
       registries: chain.registries.map((r) => ({ version: r.version, address: r.address })),
       presets: { ...(chain.presets ?? {}) },
@@ -154,6 +156,8 @@ export interface ChainDef {
   readonly nativeCurrency: { readonly name: string; readonly symbol: string; readonly decimals: number };
   readonly rpcUrl: string;
   readonly explorer: { readonly name: string; readonly url: string };
+  /** Optional. The network's own website (https origin), linked from the studio footer. */
+  readonly website?: string;
   /** Optional. A node whose newest block is older than this (seconds) is refused. Default 300; 0 turns the check off. */
   readonly maxHeadAgeSeconds?: number;
   /** Newest first. The first entry receives writes; every entry is read. */
