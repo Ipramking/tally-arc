@@ -18,25 +18,30 @@
    *                 | {ok: false, level: "unknown", error: string}>}
    * Never throws for network or decoding failures; those become level "unknown".
    */
-  async function lookup({ chain, address, fetchImpl, timeoutMs, repoCheck }) {
+  async function lookup({ chain, address, fetchImpl, timeoutMs, repoCheck, maxHeadAgeSeconds, freshnessAttempts, nowMs }) {
     if (!safe.isAddress(address)) return { ok: false, level: "unknown", error: "invalid address" };
     if (!chain.registries.length) return { ok: false, level: "unknown", error: "no registry deployed on " + chain.name };
+
+    // A node that is behind the chain gives old answers ("no record" for something registered an hour ago).
+    // Every read is checked against the answering node's newest block; the chain's own limit applies unless
+    // the caller passes one. A node that is too far behind makes the answer "unknown".
+    const guard = { maxHeadAgeSeconds: maxHeadAgeSeconds !== undefined && maxHeadAgeSeconds !== null ? maxHeadAgeSeconds : chain.maxHeadAgeSeconds, attempts: freshnessAttempts, nowMs };
 
     try {
       // Newest first. Any failed read makes the answer unknown: a missing record
       // on one registry cannot be trusted while another registry is unreachable.
       const records = [];
       for (const entry of chain.registries) {
-        const record = await registry.readRegistry(chain, entry, address, fetchImpl, timeoutMs);
+        const record = await registry.readRegistry(chain, entry, address, fetchImpl, timeoutMs, guard);
         if (record.provenance === "NONE") continue;
         if (record.registryVersion === 1 && record.provenance === "CONTROL_PROVEN") {
-          record.controlCurrent = await registry.v1ControlCurrent(chain, address, record.signer, fetchImpl, timeoutMs);
+          record.controlCurrent = await registry.v1ControlCurrent(chain, address, record.signer, fetchImpl, timeoutMs, guard);
         }
         // A deployer proof is a permanent fact, so the registry keeps reporting it as "still held" after the
         // contract changed hands. Tally does not: once the contract names another owner, the deployer no
         // longer speaks for it, and its record reads stale. A contract with no owner() leaves the proof as is.
         if (record.registryVersion === 2 && record.provenance === "CONTROL_PROVEN" && record.method === "DEPLOYER" && record.controlCurrent === true) {
-          const owner = await registry.readOwner(chain, address, fetchImpl, timeoutMs);
+          const owner = await registry.readOwner(chain, address, fetchImpl, timeoutMs, guard);
           if (owner !== null && owner !== record.signer.toLowerCase()) record.controlCurrent = false;
         }
         records.push(record);
@@ -46,7 +51,7 @@
       // A proxy's code hash survives an upgrade, so the "code unchanged" leg says nothing about it. Probe the
       // standard proxy slots for the record that could reach "verified"; a failed probe makes the answer unknown.
       if (best && best.registryVersion === 2 && status.isLive(best)) {
-        best.upgradeable = await registry.isUpgradeableProxy(chain, address, fetchImpl, timeoutMs);
+        best.upgradeable = await registry.isUpgradeableProxy(chain, address, fetchImpl, timeoutMs, guard);
       }
       let repo = null;
       if (best && status.isLive(best)) {
@@ -59,7 +64,7 @@
       let level = status.decideLevel(best, repo);
       // No record: a wallet has no code, so there is nothing to verify and nothing to register.
       // If the chain cannot say, that throws and the answer is "unknown", never "unverified".
-      if (level === "unverified" && !(await registry.hasCode(chain.rpcUrl, address, fetchImpl, timeoutMs))) level = "wallet";
+      if (level === "unverified" && !(await registry.hasCode(chain.rpcUrl, address, fetchImpl, timeoutMs, guard))) level = "wallet";
       const parsed = best ? safe.parseGithubRepo(best.githubRepo) : null;
       return {
         ok: true,
