@@ -11,5 +11,6 @@ Links without `?chain=` mean `arc`.
 | Arc | mainnet | `arc` | 5042 | USDC | [Arc Explorer](https://explorer.arc.io) | v2 [`0xd3F1…1203`](https://explorer.arc.io/address/0xd3F1D46675DE21FD3e15D42214d5C67a77631203)<br>v1 [`0x459C…36d9`](https://explorer.arc.io/address/0x459Cab32306c439a408cA6b8672CcF6c6A0536d9) | [`0x0f39…0cCb`](https://tally-studio.vercel.app/c/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb?chain=arc) | explorer web form |
 | Arc Testnet | testnet | `arc-testnet` | 5042002 | USDC | [Arc Testnet Explorer](https://explorer.testnet.arc.io) | none yet |  | explorer web form |
 | BOT Chain Testnet (Bohr) | testnet | `bot-testnet` | 968 | BOT | [Bohr Explorer](https://scan.bohr.life) | v2 [`0x5F51…9C90`](https://scan.bohr.life/address/0x5F514879a3B1fD39e47299706031F6D85c8c9C90) | [`0xEC84…4452`](https://tally-studio.vercel.app/c/0xEC84A560DF15cCb86d96c86Bb61d8CEB1c744452?chain=bot-testnet) | `hardhat verify` |
+| BOT Chain | mainnet | `bot` | 677 | BOT | [BOT Chain Explorer](https://scan.botchain.ai) | v2 [`0x459C…36d9`](https://scan.botchain.ai/address/0x459Cab32306c439a408cA6b8672CcF6c6A0536d9) | [`0x0f39…0cCb`](https://tally-studio.vercel.app/c/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb?chain=bot) | `hardhat verify` |
 
 Tally works on any EVM chain. To add yours, see [adding-a-chain.md](adding-a-chain.md).
