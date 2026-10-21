@@ -623,6 +623,32 @@ pre.code {
 .footer a:hover {
   color: var(--paper);
 }
+.footer-networks {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 22px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.footer-network {
+  display: inline-flex;
+  gap: 10px;
+}
+.footer-network a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.footer-note {
+  flex-basis: 100%;
+  margin: 0;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
+}
 
 /* Panels, forms and records ------------------------------------------------ */
 .form-head {

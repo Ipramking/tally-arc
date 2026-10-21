@@ -93,6 +93,7 @@
           "name": "BOT Chain Explorer",
           "url": "https://scan.botchain.ai"
         },
+        "website": "https://botchain.ai",
         "registries": [
           {
             "version": 2,
