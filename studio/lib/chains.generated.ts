@@ -24,7 +24,7 @@ export interface ChainDef {
   readonly presets: { readonly verified?: `0x${string}`; readonly unverified?: `0x${string}` };
 }
 
-export const STUDIO_URL = "https://tally-studio.vercel.app";
+export const STUDIO_URL = "https://tallyarc.tech";
 export const DEFAULT_CHAIN_KEY = "arc";
 
 export const CHAINS = [

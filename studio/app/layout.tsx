@@ -7,6 +7,7 @@ import "@fontsource/ibm-plex-mono/latin-400.css";
 import "@fontsource/ibm-plex-mono/latin-500.css";
 import "@fontsource/ibm-plex-mono/latin-600.css";
 import "./globals.css";
+import { WalletProvider } from "./components/WalletProvider";
 import { STUDIO_URL } from "@/lib/chain";
 
 // Every page is rendered per request so the Content-Security-Policy nonce
@@ -39,7 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <a className="skip" href="#main">
           Skip to content
         </a>
-        {children}
+        <WalletProvider>{children}</WalletProvider>
       </body>
     </html>
   );

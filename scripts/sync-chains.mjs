@@ -7,7 +7,7 @@
 // Generated:
 //   studio/lib/chains.generated.ts     typed chain table for the Next.js studio
 //   extension/chains.generated.js      chain table for the browser extension
-//   extension/manifest.json            ONLY content_scripts[0].matches and host_permissions
+//   extension/manifest.json            ONLY content_scripts[0].matches, host_permissions and homepage_url
 //   docs/networks.md                   the list of supported networks and their registries
 //
 // Hardhat reads chains.json directly, so it needs no generated file.
@@ -188,6 +188,7 @@ function renderManifest(data, existing) {
   const explorers = data.chains.map((c) => `${new URL(c.explorer.url).origin}/*`);
   const rpcs = data.chains.map((c) => `${new URL(c.rpcUrl).origin}/*`);
   const unique = (list) => [...new Set(list)];
+  manifest.homepage_url = data.studioUrl;
   manifest.content_scripts[0].matches = unique(explorers);
   // Network access happens in the service worker: JSON-RPC endpoints and the
   // repository host. Explorers need no host permission; content scripts are
