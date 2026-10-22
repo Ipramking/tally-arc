@@ -29,9 +29,9 @@ listing limits (name at most 45 characters, description at most 132).
 | Summary | The manifest's `description` |
 | Category | Developer Tools |
 | Language | English |
-| Homepage | https://tally-studio.vercel.app |
+| Homepage | https://tallyarc.tech |
 | Support | https://github.com/Ipramking/tally-arc/issues |
-| Privacy policy | https://tally-studio.vercel.app/privacy |
+| Privacy policy | https://tallyarc.tech/privacy |
 | Visibility | **Unlisted** first (see below) |
 
 **Detailed description**

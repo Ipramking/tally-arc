@@ -1,18 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { Fragment, useMemo, useState, useSyncExternalStore } from "react";
 import type { Address, Hex } from "viem";
 import { ChainSwitch } from "../components/ChainSwitch";
 import { LiveTallySnippet } from "../components/LiveTallySnippet";
+import { useWallet } from "../components/WalletProvider";
 import { REVERT_HELP } from "@/lib/abi";
 import { chains, explorerTxUrl, writeRegistry, type ChainDef } from "@/lib/chain";
 import { planProof } from "@/lib/prove";
 import { parseRecent, readRecentRaw, rememberRegistration, saveRecent, subscribeRecent } from "@/lib/recent";
 import { explainPlan, reviewRegistration, validateRegisterInput, type PlanView } from "@/lib/register";
 import { submitRegistration, type Step } from "@/lib/register-flow";
-import { isAddress, parseGithubRepo, shorten } from "@/lib/safe-url";
-import { discoverWallets, friendlyError, switchToChain, type DiscoveredWallet } from "@/lib/wallet";
+import { parseGithubRepo, shorten } from "@/lib/safe-url";
+import { friendlyError, switchToChain } from "@/lib/wallet";
 
 const BUSY_TEXT: Record<Step | "checking", string> = {
   checking: "Reading the contract…",
@@ -27,9 +28,8 @@ type Done = { hash: Hex; confirmed: boolean; target: Address };
 
 export function RegisterForm({ chain, initialAddress }: { chain: ChainDef; initialAddress: string }) {
   const registry = writeRegistry(chain);
-  const [wallets, setWallets] = useState<DiscoveredWallet[] | null>(null);
-  const [walletId, setWalletId] = useState("");
-  const [account, setAccount] = useState<Address | null>(null);
+  // The wallet connection is shared by the whole site: connecting from the nav on any page counts here too.
+  const { wallets, wallet, account, error: walletError, connect: connectWallet, select: selectWallet } = useWallet();
   const [target, setTarget] = useState(initialAddress);
   const [repo, setRepo] = useState("");
   const [buildHash, setBuildHash] = useState("");
@@ -43,7 +43,6 @@ export function RegisterForm({ chain, initialAddress }: { chain: ChainDef; initi
   const recentRaw = useSyncExternalStore(subscribeRecent, readRecentRaw, () => null);
   const recent = useMemo(() => parseRecent(recentRaw), [recentRaw]);
 
-  const wallet = wallets?.find((w) => w.id === walletId) ?? null;
   const input = validateRegisterInput({ target, repo, buildHash });
   const touched = target.trim() !== "" || repo.trim() !== "";
   const planKey = account && input.ok ? `${account}:${input.target}` : null;
@@ -63,42 +62,10 @@ export function RegisterForm({ chain, initialAddress }: { chain: ChainDef; initi
     </div>
   ) : null;
 
-  useEffect(() => {
-    let live = true;
-    discoverWallets(window).then((found) => {
-      if (!live) return;
-      setWallets(found);
-      setWalletId((current) => current || found[0]?.id || "");
-    });
-    return () => {
-      live = false;
-    };
-  }, []);
-
-  // Follow account switches made inside the wallet.
-  useEffect(() => {
-    const provider = wallet?.provider;
-    if (!provider?.on) return;
-    const onAccounts = (accounts: unknown) => {
-      const first = Array.isArray(accounts) ? accounts[0] : null;
-      setAccount(isAddress(first) ? first : null);
-    };
-    provider.on("accountsChanged", onAccounts);
-    return () => provider.removeListener?.("accountsChanged", onAccounts);
-  }, [wallet]);
-
   async function connect() {
     if (!wallet) return;
     setError(null);
-    try {
-      const accounts = await wallet.provider.request({ method: "eth_requestAccounts" });
-      const first = Array.isArray(accounts) ? accounts[0] : null;
-      if (!isAddress(first)) throw new Error("The wallet did not return an account.");
-      setAccount(first);
-    } catch (e) {
-      setError(friendlyError(e, REVERT_HELP));
-      return;
-    }
+    if (!(await connectWallet())) return;
     // Move the wallet onto the chosen network now, not only at signing time. If the wallet
     // refuses, the connection stands and signing asks again.
     try {
@@ -183,7 +150,7 @@ export function RegisterForm({ chain, initialAddress }: { chain: ChainDef; initi
             <>
               <span className="mono small">Connected: {shorten(account)}</span>
               {wallets && wallets.length > 1 && (
-                <select className="input" aria-label="Wallet" value={walletId} onChange={(e) => (setWalletId(e.target.value), setAccount(null))}>
+                <select className="input" aria-label="Wallet" value={wallet?.id ?? ""} onChange={(e) => selectWallet(e.target.value)}>
                   {wallets.map((w) => (
                     <option key={w.id} value={w.id}>
                       {w.name}
@@ -195,7 +162,7 @@ export function RegisterForm({ chain, initialAddress }: { chain: ChainDef; initi
           ) : (
             <>
               {wallets && wallets.length > 1 && (
-                <select className="input" aria-label="Wallet" value={walletId} onChange={(e) => setWalletId(e.target.value)}>
+                <select className="input" aria-label="Wallet" value={wallet?.id ?? ""} onChange={(e) => selectWallet(e.target.value)}>
                   {wallets.map((w) => (
                     <option key={w.id} value={w.id}>
                       {w.name}
@@ -213,6 +180,11 @@ export function RegisterForm({ chain, initialAddress }: { chain: ChainDef; initi
           <p className="status warn" role="status">
             No browser wallet found. Install one (MetaMask, Rabby or similar), then reload this page.
           </p>
+        )}
+        {!account && walletError && (
+          <div className="status err" role="alert">
+            {walletError}
+          </div>
         )}
         {errorAt === "wallet" && errorBox}
       </div>

@@ -12,12 +12,12 @@ no safety rating, no proof the source builds to the bytecode) is in [security.md
 
 ## 1. Check a contract
 
-- **Studio:** `https://tally-studio.vercel.app/c/<address>?chain=<key>` shows the level, the evidence behind it
+- **Studio:** `https://tallyarc.tech/c/<address>?chain=<key>` shows the level, the evidence behind it
   and the registration history.
 - **Extension:** badges on the explorer pages of every network in the table, and a lookup popup. There is no
   store listing yet: open `chrome://extensions`, turn on Developer mode, choose **Load unpacked** and select the
   [`extension/`](../extension) folder.
-- **Badge:** `https://tally-studio.vercel.app/api/badge/<address>?chain=<key>` is an SVG that always answers `200`.
+- **Badge:** `https://tallyarc.tech/api/badge/<address>?chain=<key>` is an SVG that always answers `200`.
 
 ## 2. Register your contract
 
@@ -25,7 +25,7 @@ You need the wallet that **owns** the contract (`owner()`), holds its **default 
 with a plain `CREATE`. About five minutes, and one transaction in the network's gas token (for example about
 0.005 USDC on Arc).
 
-1. Open the studio's [register page](https://tally-studio.vercel.app/register), pick the network and connect the
+1. Open the studio's [register page](https://tallyarc.tech/register), pick the network and connect the
    wallet. It switches to the network for you.
 2. Enter the contract and its GitHub repository, then **Check what can be proven**, sign one message, and
    approve one transaction.
@@ -62,7 +62,7 @@ signature to a dapp in time depends on the Safe client.
 ### JSON API
 
 ```
-GET https://tally-studio.vercel.app/api/lookup/<address>?chain=<key>
+GET https://tallyarc.tech/api/lookup/<address>?chain=<key>
 ```
 
 Without `chain` the default network in `chains.json` is used, and the response always says which. Example, for the
@@ -92,8 +92,8 @@ demo contract on Arc:
   "repository": { "url": "https://github.com/Ipramking/tally-arc", "owner": "Ipramking", "repo": "tally-arc" },
   "repoCheck": { "status": "confirmed", "bound": true, "tallyJson": "https://raw.githubusercontent.com/Ipramking/tally-arc/HEAD/tally.json" },
   "links": {
-    "record": "https://tally-studio.vercel.app/c/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb?chain=arc",
-    "badge": "https://tally-studio.vercel.app/api/badge/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb?chain=arc",
+    "record": "https://tallyarc.tech/c/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb?chain=arc",
+    "badge": "https://tallyarc.tech/api/badge/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb?chain=arc",
     "explorer": "https://explorer.arc.io/address/0x0f399C0143CAd70b43D18a5696026B0cEdcA0cCb"
   }
 }
@@ -112,8 +112,8 @@ demo contract on Arc:
 
 ### Embed the badge or link to the record
 
-`![Tally](https://tally-studio.vercel.app/api/badge/<address>?chain=<key>)` and
-`https://tally-studio.vercel.app/c/<address>?chain=<key>`.
+`![Tally](https://tallyarc.tech/api/badge/<address>?chain=<key>)` and
+`https://tallyarc.tech/c/<address>?chain=<key>`.
 
 ### Use the library
 

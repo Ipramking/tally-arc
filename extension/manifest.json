@@ -3,7 +3,7 @@
   "name": "Tally: Contract Provenance",
   "version": "0.2.0",
   "description": "Provenance badges for contracts on supported block explorers: Verified, Control proven, Stale, Self-attested or Unverified.",
-  "homepage_url": "https://tally-studio.vercel.app",
+  "homepage_url": "https://tallyarc.tech",
   "minimum_chrome_version": "110",
   "icons": {
     "16": "icons/icon16.png",
