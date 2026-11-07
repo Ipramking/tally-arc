@@ -15,6 +15,8 @@ export interface Chain {
   /** https only. */
   rpcUrl: string;
   explorer?: { name: string; url: string };
+  /** The network's own site (https origin). */
+  website?: string;
   /** A node whose newest block is older than this many seconds is refused (default 300; 0 turns the check off). */
   maxHeadAgeSeconds?: number;
   /** Newest first. Every entry is read; the newest record wins. */

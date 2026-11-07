@@ -1,7 +1,7 @@
 # tally-provenance
 
 Ask whether a smart contract's source is vouched for, on any EVM chain, and fail CI when a repository's
-`tally.json` and the chain disagree. This is the [Tally](https://tally-studio.vercel.app) lookup code the studio and
+`tally.json` and the chain disagree. This is the [Tally](https://tallyarc.tech) lookup code the studio and
 the browser extension run, as a package.
 
 ```
@@ -43,7 +43,7 @@ const chain = {
 ```
 
 Prefer the hosted JSON API when you do not want to make RPC calls yourself:
-`GET https://tally-studio.vercel.app/api/lookup/<address>?chain=<key>`.
+`GET https://tallyarc.tech/api/lookup/<address>?chain=<key>`.
 
 ## Check `tally.json` in CI
 

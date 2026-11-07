@@ -56,3 +56,25 @@ export function chainHref(pathname: string, search: string, key: string): string
 export function chainLabel(chain: ChainDef): string {
   return `${chain.name} \u00b7 ${chain.id}`;
 }
+
+export interface NetworkLink {
+  key: string;
+  name: string;
+  /** The network's own site, when chains.json lists one. */
+  website: string | null;
+  explorerName: string;
+  explorerUrl: string;
+}
+
+/** The mainnets the studio reads, with the links its footer shows. Testnets are left out. Everything comes from chains.json. */
+export function networkLinks(list: readonly ChainDef[] = chains): NetworkLink[] {
+  return list
+    .filter((chain) => !chain.testnet)
+    .map((chain) => ({
+      key: chain.key,
+      name: chain.name,
+      website: chain.website ?? null,
+      explorerName: chain.explorer.name,
+      explorerUrl: chain.explorer.url,
+    }));
+}

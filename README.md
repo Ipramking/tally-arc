@@ -22,7 +22,7 @@ source code names a specific network. It is live today on Arc and on BOT Chain's
 [docs/networks.md](docs/networks.md) lists every network with its registry addresses and an example
 verified contract, and [docs/adding-a-chain.md](docs/adding-a-chain.md) shows how to add yours.
 
-**Studio:** https://tally-studio.vercel.app
+**Studio:** https://tallyarc.tech
 
 **Start here:** [docs/getting-started.md](docs/getting-started.md) takes a team from nothing to Tally Verified, shows how to check and
 show the answer, and says what a chain needs to be supported.
@@ -72,7 +72,7 @@ what you see is what the chain supports.
 Building Tally into a project or a product (registering, the JSON API, the library, adding a network, trying it for
 real) is covered in [docs/integrating.md](docs/integrating.md). The short version:
 
-**Register a contract.** Open the studio's [register page](https://tally-studio.vercel.app/register),
+**Register a contract.** Open the studio's [register page](https://tallyarc.tech/register),
 connect the wallet that controls the contract, and sign one EIP-712 message. The
 registry checks `owner()`, the default admin role, or the deployer address, and
 records the code hash. Anyone may relay the signature.
@@ -97,7 +97,7 @@ signer included.
 **Add a badge to your README.**
 
 ```markdown
-![Tally](https://tally-studio.vercel.app/api/badge/0xYourContract?chain=<network-key>)
+![Tally](https://tallyarc.tech/api/badge/0xYourContract?chain=<network-key>)
 ```
 
 Network keys are listed in [docs/networks.md](docs/networks.md).

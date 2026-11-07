@@ -37,6 +37,11 @@ export default function PrivacyPage() {
             it. Clearing the site&apos;s data removes that.
           </p>
           <p className="hint">
+            <b>Connecting a wallet.</b> The connect button asks your wallet to share one account with this site. To keep you connected from page to page, your browser stores which wallet you used (its name, not
+            your address). Your address is read from the wallet on each visit. It is sent to the studio only on the register page, so the tally.json it suggests can name your wallet as the signer. Disconnect
+            from the button to forget the wallet and ask it to stop sharing.
+          </p>
+          <p className="hint">
             <b>Hosting.</b> The studio runs on Vercel, which keeps standard request logs (IP address, browser and URL) to run and protect the service. The studio adds no cookies, trackers or analytics of its own.
           </p>
         </section>

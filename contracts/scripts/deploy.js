@@ -26,6 +26,8 @@ async function main() {
 
   const Registry = await ethers.getContractFactory(name);
   const registry = await Registry.deploy();
+  // Printed before waiting, so a transaction the node accepts but never mines can still be reported.
+  console.log(`Deploy tx: ${registry.deploymentTransaction().hash}`);
   await registry.waitForDeployment();
   const address = await registry.getAddress();
 

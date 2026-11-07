@@ -19,7 +19,7 @@ The reference pages are [integrating.md](integrating.md) (the API, the library, 
 **You need:** the wallet that owns the contract (`owner()`), holds its default admin role, or deployed it with a plain
 `CREATE`; a public GitHub repository; and a little gas in the network's token (for example about 0.005 USDC on Arc).
 
-1. **Register.** Open the [register page](https://tally-studio.vercel.app/register), pick the network, connect the wallet,
+1. **Register.** Open the [register page](https://tallyarc.tech/register), pick the network, connect the wallet,
    enter the contract and its repository, run **Check what can be proven**, sign once and approve one transaction. From a
    script: `REGISTRY=0x... TARGET=0x... REPO=https://github.com/you/project npm run register -- --network <name>` in `contracts/`.
 2. **Publish `tally.json`** at the root of that repository, on the default branch. The register page shows the exact file:
@@ -28,13 +28,13 @@ The reference pages are [integrating.md](integrating.md) (the API, the library, 
    ```
    `signer` is required: the repository has to name the wallet that registered.
 3. **Check that it worked,** any one of these:
-   - the record page `https://tally-studio.vercel.app/c/<address>?chain=<key>` reads **Tally Verified** with every row of the
+   - the record page `https://tallyarc.tech/c/<address>?chain=<key>` reads **Tally Verified** with every row of the
      evidence list ticked;
-   - `curl "https://tally-studio.vercel.app/api/lookup/<address>?chain=<key>"` returns `"level": "verified"`;
+   - `curl "https://tallyarc.tech/api/lookup/<address>?chain=<key>"` returns `"level": "verified"`;
    - in your repository, `npx -p tally-provenance tally-verify` ends with `1 checked: 1 ok`.
 
    GitHub caches raw files for a few minutes, so a new `tally.json` can take that long to show.
-4. **Show it.** Put the badge in your README, `![Tally](https://tally-studio.vercel.app/api/badge/<address>?chain=<key>)`.
+4. **Show it.** Put the badge in your README, `![Tally](https://tallyarc.tech/api/badge/<address>?chain=<key>)`.
    People with the browser extension see it next to your address on the explorer.
 5. **Keep it true.** Add the [GitHub Action](integrating.md#check-tallyjson-in-ci) so a record that went stale fails a build
    instead of misleading a user. Register again after an upgrade or redeploy that changes the code, and after a hand-over

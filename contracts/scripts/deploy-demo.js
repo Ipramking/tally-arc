@@ -12,6 +12,7 @@ async function main() {
 
   const Target = await ethers.getContractFactory("OwnableTarget");
   const target = await Target.deploy(deployer.address);
+  console.log(`Deploy tx: ${target.deploymentTransaction().hash}`);
   await target.waitForDeployment();
   const address = await target.getAddress();
 

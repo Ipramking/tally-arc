@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isAddress } from "viem";
-import { chains, defaultChain, explorerAddressUrl, explorerTxUrl, resolveChain, serverChain, writeRegistry } from "@/lib/chain";
+import { chains, defaultChain, explorerAddressUrl, explorerTxUrl, networkLinks, resolveChain, serverChain, writeRegistry } from "@/lib/chain";
 import { arcChain } from "./helpers";
 
 describe("chain table", () => {
@@ -53,6 +53,26 @@ describe("helpers", () => {
   it("explorer links come from the configured explorer", () => {
     expect(explorerAddressUrl(arcChain, "0xabc")).toBe(`${arcChain.explorer.url}/address/0xabc`);
     expect(explorerTxUrl(arcChain, "0xdef")).toBe(`${arcChain.explorer.url}/tx/0xdef`);
+  });
+
+  it("networkLinks lists mainnets only, with an own-site link only where chains.json has one", () => {
+    const mainnet = { ...arcChain, key: "main", name: "Main", testnet: false, website: "https://main.example" };
+    const bare = { ...arcChain, key: "bare", name: "Bare", testnet: false, website: undefined };
+    const test = { ...arcChain, key: "test", name: "Test", testnet: true, website: "https://test.example" };
+    expect(networkLinks([mainnet, bare, test]).map((n) => [n.key, n.website])).toEqual([
+      ["main", "https://main.example"],
+      ["bare", null],
+    ]);
+  });
+
+  it("the footer links the real table gives for BOT Chain are its site and its explorer", () => {
+    const bot = networkLinks().find((n) => n.key === "bot");
+    expect(bot).toMatchObject({ name: "BOT Chain", website: "https://botchain.ai", explorerUrl: "https://scan.botchain.ai" });
+    for (const n of networkLinks()) {
+      expect(n.explorerUrl.startsWith("https://"), n.key).toBe(true);
+      if (n.website) expect(n.website.startsWith("https://"), n.key).toBe(true);
+    }
+    expect(networkLinks().every((n) => !chains.find((c) => c.key === n.key)!.testnet)).toBe(true);
   });
 
   it("serverChain applies a valid https override and ignores unsafe ones", () => {
