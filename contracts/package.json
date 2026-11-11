@@ -11,7 +11,7 @@
     "register": "hardhat run scripts/register.js"
   },
   "devDependencies": {
-    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@nomicfoundation/hardhat-toolbox": "^6.1.2",
     "@safe-global/safe-contracts": "1.4.1-2",
     "hardhat": "^2.22.10"
   },
